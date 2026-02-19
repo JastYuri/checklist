@@ -1,0 +1,38 @@
+# Environment variables (contains secrets like MongoDB URI)
+.env
+.env.local
+.env.production
+.env.development
+
+# Node.js dependencies
+node_modules/
+
+# Build outputs
+build/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Private keys or certificates
+*.key
+*.pem
+*.crt
+
+# Database dumps or local DB files
+*.db
+*.sqlite
+
+# Heroku-specific (optional, but good to exclude)
+.heroku/
