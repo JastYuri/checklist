@@ -5,7 +5,7 @@ import Navbar from "./components/Navbar";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-import Checklist from "./pages/checklist";
+import Checklist from "./pages/Checklist";
 import ReportPage from "./pages/ReportPage";   // ✅ Now acts as Job List
 import Category from "./pages/Category";
 import Manual from "./pages/Manual"; // ✅ Import the new Manual component
