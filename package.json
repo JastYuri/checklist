@@ -1,11 +1,11 @@
 {
-  "name": "your-mern-app",
+  "name": "checklist-system",
   "version": "1.0.0",
   "engines": {
-    "node": "v24.12.0" 
+    "node": "24.12.0" 
   },
   "scripts": {
-    "install": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
     "build": "cd frontend && npm run build",
     "start": "cd backend && npm start"
   },

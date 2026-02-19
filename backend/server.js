@@ -28,7 +28,7 @@ app.use("/api/job", jobRoutes);
 app.use("/api/report", reportRoutes);
 app.use("/api/manual", manualRoutes);
 
-// Serve static files from React build
+// Serve static files from React build (for production)
 app.use(express.static(path.join(__dirname, '../frontend/build')));
 
 // Catch-all handler for React routing (must be last)
