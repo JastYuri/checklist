@@ -9,8 +9,11 @@ import jobRoutes from "./src/routes/jobRoutes.js";
 import reportRoutes from "./src/routes/reportRoutes.js";
 import manualRoutes from "./src/routes/manual.js";
 import path from "path";
+import { fileURLToPath } from "url";
 
-
+// Fix for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 connectDB();
@@ -28,10 +31,10 @@ app.use("/api/job", jobRoutes);
 app.use("/api/report", reportRoutes);
 app.use("/api/manual", manualRoutes);
 
-// Serve static files from React build (for production)
+// Serve static files from React build
 app.use(express.static(path.join(__dirname, '../frontend/build')));
 
-// Catch-all handler for React routing (must be last)
+// Catch-all for React routing
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
 });
