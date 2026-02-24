@@ -2,14 +2,21 @@
 import Job from "../models/Job.js";
 import Category from "../models/Category.js";
 import mongoose from "mongoose";
-import cloudinary from "../config/cloudinary.js"; // ✅ Import Cloudinary
+import { cloudinary } from "../config/cloudinary.js";
 
-// ✅ REMOVED: All local multer config - now handled by config/cloudinary.js
 
-// Helper function to find file by fieldname
-const findFile = (files, fieldname) => {
-  if (!files || !Array.isArray(files)) return null;
-  return files.find(file => file.fieldname === fieldname);
+
+// ✅ Universal file finder - works with upload.any(), upload.single(), upload.fields()
+const findFile = (req, fieldname) => {
+  // First check req.file (from upload.single)
+  if (req.file && req.file.fieldname === fieldname) {
+    return req.file;
+  }
+  // Then check req.files (from upload.any() or upload.fields())
+  if (req.files && Array.isArray(req.files)) {
+    return req.files.find(f => f.fieldname === fieldname);
+  }
+  return null;
 };
 
 // ✅ Updated: saveJob - Now uses Cloudinary URLs
@@ -78,7 +85,7 @@ export const saveJob = async (req, res) => {
     let processedAppearanceData = [];
     if (parsedAppearanceMarks && Array.isArray(parsedAppearanceMarks)) {
       processedAppearanceData = parsedAppearanceMarks.map((mark, idx) => {
-        const file = findFile(req.files, `appearance-${idx}`);
+      const file = findFile(req, `appearance-${idx}`);
         let imagePath = null;
         if (file) {
           imagePath = file.path; // ✅ Cloudinary URL!
@@ -101,7 +108,7 @@ export const saveJob = async (req, res) => {
     let processedSummaryData = [];
     if (parsedDefectSummary && Array.isArray(parsedDefectSummary)) {
       processedSummaryData = parsedDefectSummary.map((defect, idx) => {
-        const file = findFile(req.files, `summary-${idx}`);
+        const file = findFile(req, `summary-${idx}`);
         let imagePath = null;
         if (file) {
           imagePath = file.path; // ✅ Cloudinary URL!
@@ -215,7 +222,7 @@ if (appearanceMarks) {
   
   const processedAppearance = await Promise.all(parsedAppearance.map(async (mark, idx) => {
     let imagePath = mark.image;
-    const file = findFile(req.files, `appearance-${idx}`);
+    const file = findFile(req, `appearance-${idx}`);
     if (file) {
       // Delete old image from Cloudinary if exists
       if (mark.image && typeof mark.image === 'string') {
@@ -244,7 +251,7 @@ if (defectSummary) {
   
   const processedSummary = await Promise.all(parsedSummary.map(async (defect, idx) => {
     let imagePath = defect.image;
-    const file = findFile(req.files, `summary-${idx}`);
+    const file = findFile(req, `summary-${idx}`);
     if (file) {
       // Delete old image from Cloudinary if exists
       if (defect.image && typeof defect.image === 'string') {

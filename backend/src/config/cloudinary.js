@@ -12,16 +12,39 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Create storage engine
+// ✅ Storage for single images (checklist items)
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: 'checklist',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
-    transformation: [{ width: 500, height: 500, crop: 'limit' }], // optional
+    folder: 'checklist/items',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+  },
+});
+
+// ✅ Storage for appearance images (multiple)
+const storageAppearance = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'checklist/appearance',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+  },
+});
+
+// ✅ Storage for PDFs (manuals)
+const storagePdf = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'manuals',
+    allowed_formats: ['pdf'],
+    resource_type: 'raw',
   },
 });
 
 const upload = multer({ storage: storage });
+const uploadAppearance = multer({ storage: storageAppearance });
+const uploadPdf = multer({ storage: storagePdf });
 
+// ✅ Export cloudinary for use in controllers
+export { cloudinary };
+export { upload, uploadAppearance, uploadPdf };
 export default upload;

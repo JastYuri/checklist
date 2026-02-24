@@ -1,11 +1,7 @@
 // controllers/Category.js
 import Category from "../models/Category.js";
 import mongoose from "mongoose";
-import cloudinary from "../config/cloudinary.js"; // ✅ Import for deletion
-
-// ✅ REMOVED: All local multer config - now handled by cloudinary.js
-
-// ✅ REMOVED: upload export - now imported from cloudinary.js
+import { cloudinary } from "../config/cloudinary.js";
 
 // Create a new category
 export const createCategory = async (req, res) => {
@@ -120,9 +116,12 @@ export const addChecklistSection = async (req, res) => {
   }
 };
 
-// ✅ Updated: addChecklistItem - Now uses Cloudinary URL
 export const addChecklistItem = async (req, res) => {
   try {
+     console.log("=== DEBUG ===");
+    console.log("req.files:", req.files);
+    console.log("req.file:", req.file);
+    console.log("req.body:", req.body);
     const { id, sectionId } = req.params;
     const { name, type, parentItem } = req.body;
 
@@ -145,10 +144,10 @@ export const addChecklistItem = async (req, res) => {
       parentRef = new mongoose.Types.ObjectId(parentItem);
     }
 
-    // ✅ CHANGE: Use Cloudinary URL directly (req.file.path contains the URL)
+    // ✅ FIXED: Use req.file (singular) for upload.single()
     let imagePath = null;
-    if (req.files && req.files.image && req.files.image[0]) {
-      imagePath = req.files.image[0].path; // This is now a Cloudinary URL!
+    if (req.file) {
+      imagePath = req.file.path; // This is the Cloudinary URL!
     }
 
     const newItem = {
@@ -171,7 +170,6 @@ export const addChecklistItem = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
-
 export const updateChecklist = async (req, res) => {
   try {
     const { id } = req.params;
@@ -281,6 +279,10 @@ export const deleteChecklistItem = async (req, res) => {
 // ✅ Updated: updateChecklistItem - Now uses Cloudinary
 export const updateChecklistItem = async (req, res) => {
   try {
+    console.log("=== UPDATE DEBUG ===");
+    console.log("req.files:", req.files);
+    console.log("req.file:", req.file);
+    
     const { id, sectionId, itemId } = req.params;
     const { name, type } = req.body;
 
@@ -296,8 +298,8 @@ export const updateChecklistItem = async (req, res) => {
     if (name) item.name = name;
     if (type) item.type = type;
 
-    // ✅ CHANGE: Handle image upload from Cloudinary
-    if (req.files && req.files.image && req.files.image[0]) {
+    // ✅ FIXED: Use req.file (singular) for upload.single()
+    if (req.file) {
       // Delete old image from Cloudinary
       if (item.image) {
         try {
@@ -308,7 +310,7 @@ export const updateChecklistItem = async (req, res) => {
         }
       }
       // Save new Cloudinary URL
-      item.image = req.files.image[0].path;
+      item.image = req.file.path;
     }
 
     await category.save();
@@ -322,6 +324,9 @@ export const updateChecklistItem = async (req, res) => {
 // ✅ Updated: updateAppearanceImages - Now uses Cloudinary
 export const updateAppearanceImages = async (req, res) => {
   try {
+    console.log("=== APPEARANCE DEBUG ===");
+    console.log("req.files:", req.files);
+    
     const { id } = req.params;
 
     const category = await Category.findById(id);
@@ -331,7 +336,7 @@ export const updateAppearanceImages = async (req, res) => {
       category.appearanceImages = { front: null, rear: null, left: null, right: null };
     }
 
-    // ✅ CHANGE: Use for...of instead of forEach (allows await)
+    // ✅ For upload.fields(), the format is req.files['fieldname']
     const sides = ['front', 'rear', 'left', 'right'];
     for (const side of sides) {
       if (req.files && req.files[side] && req.files[side][0]) {

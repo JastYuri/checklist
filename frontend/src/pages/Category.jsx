@@ -69,6 +69,16 @@ const [appearanceImagePreviews, setAppearanceImagePreviews] = useState({
   const [deleteItemModalOpen, setDeleteItemModalOpen] = useState(false);
   const [targetItem, setTargetItem] = useState(null);
 
+  // ✅ NEW: Saving states for different operations
+const [savingCategory, setSavingCategory] = useState(false);       // Add category
+const [savingSection, setSavingSection] = useState(false);          // Add section
+const [savingItem, setSavingItem] = useState(false);              // Add item
+const [savingEditItem, setSavingEditItem] = useState(false);       // Edit item
+const [savingAppearance, setSavingAppearance] = useState(false);  // Save appearance images
+const [deletingCategory, setDeletingCategory] = useState(false);   // Delete category
+const [deletingSection, setDeletingSection] = useState(false);     // Delete section
+const [deletingItem, setDeletingItem] = useState(false);           // Delete item
+
   const modalRef = useRef(null);
 
   const fetchCategories = async () => {
@@ -80,33 +90,39 @@ const [appearanceImagePreviews, setAppearanceImagePreviews] = useState({
     }
   };
 
-  const handleAdd = async () => {
-    try {
-      await axiosInstance.post("/category", {
-        name,
-        description,
-        parent: parentId || null,
-      });
-      toast.success("Category created!");
-      setModalOpen(false);
-      setName("");
-      setDescription("");
-      setParentId(null);
-      fetchCategories();
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Error creating category");
-    }
-  };
+ const handleAdd = async () => {
+  setSavingCategory(true); // ✅ Start saving
+  try {
+    await axiosInstance.post("/category", {
+      name,
+      description,
+      parent: parentId || null,
+    });
+    toast.success("Category created!");
+    setModalOpen(false);
+    setName("");
+    setDescription("");
+    setParentId(null);
+    fetchCategories();
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Error creating category");
+  } finally {
+    setSavingCategory(false); // ✅ End saving
+  }
+};
 
-  const handleDelete = async (id) => {
-    try {
-      await axiosInstance.delete(`/category/${id}`);
-      toast.success("Category deleted!");
-      fetchCategories();
-    } catch (error) {
-      toast.error("Error deleting category");
-    }
-  };
+ const handleDelete = async (id) => {
+  setDeletingCategory(true); // ✅ Start deleting
+  try {
+    await axiosInstance.delete(`/category/${id}`);
+    toast.success("Category deleted!");
+    fetchCategories();
+  } catch (error) {
+    toast.error("Error deleting category");
+  } finally {
+    setDeletingCategory(false); // ✅ End deleting
+  }
+};
 
  // ✅ Manage checklist
 const handleManageChecklist = async (cat) => {
@@ -138,27 +154,28 @@ const handleManageChecklist = async (cat) => {
 
   // Add Section
   const handleSaveSection = async () => {
-    if (!newSectionName.trim()) return;
-    try {
-      const res = await axiosInstance.post(
-        `/category/${activeCategory._id}/checklist/section`,
-        { section: newSectionName }
-      );
-
-      // ✅ Update both category and checklist
-      setActiveCategory(res.data);
-      setActiveChecklist(res.data.checklist);
-
-      toast.success("Section added!");
-      setAddSectionModalOpen(false);
-      setNewSectionName("");
-    } catch (error) {
-      toast.error("Error adding section");
-    }
-  };
+  if (!newSectionName.trim()) return;
+  setSavingSection(true); // ✅ Start saving
+  try {
+    const res = await axiosInstance.post(
+      `/category/${activeCategory._id}/checklist/section`,
+      { section: newSectionName }
+    );
+    setActiveCategory(res.data);
+    setActiveChecklist(res.data.checklist);
+    toast.success("Section added!");
+    setAddSectionModalOpen(false);
+    setNewSectionName("");
+  } catch (error) {
+    toast.error("Error adding section");
+  } finally {
+    setSavingSection(false); // ✅ End saving
+  }
+};
 // ✅ Updated handleSaveItem (unchanged, but ensure it's using FormData correctly)
   const handleSaveItem = async () => {
     if (!targetSection) return;
+    setSavingItem(true); 
     try {
       let itemName = "";
       if (itemType === "input") {
@@ -196,7 +213,9 @@ const handleManageChecklist = async (cat) => {
       setImagePreview(null);
     } catch (error) {
       toast.error("Error adding item");
-    }
+    }  finally {
+    setSavingItem(false); // ✅ End saving
+  }
   };
 
 // ... (in the Add Item Modal, update the note for input items)
@@ -207,6 +226,7 @@ const handleManageChecklist = async (cat) => {
 )}
   // Delete Section
   const handleDeleteSection = async (sectionId) => {
+     setDeletingSection(true);
     try {
       const res = await axiosInstance.delete(
         `/category/${activeCategory._id}/checklist/${sectionId}`
@@ -218,7 +238,9 @@ const handleManageChecklist = async (cat) => {
       toast.success("Section deleted!");
     } catch (error) {
       toast.error("Error deleting section");
-    }
+    } finally {
+    setDeletingSection(false); // ✅ End deleting
+  }
   };
 
  // ✅ New functions for image handling (unchanged)
@@ -307,6 +329,7 @@ const removeAppearanceImage = (side) => {
 
 // ✅ Save appearance images to category
 const handleSaveAppearanceImages = async () => {
+  setSavingAppearance(true);
   try {
     const formData = new FormData();
     Object.keys(appearanceImages).forEach(side => {
@@ -325,11 +348,14 @@ const handleSaveAppearanceImages = async () => {
     toast.success("Appearance images saved!");
   } catch (error) {
     toast.error("Error saving appearance images");
+  } finally {
+    setSavingAppearance(false); // ✅ End saving
   }
 };
 
  const handleSaveEditedItem = async () => {
   if (!targetSection || !editingItem) return;
+   setSavingEditItem(true);
   try {
     let itemName = "";
     if (editItemType === "input") {
@@ -369,6 +395,8 @@ const handleSaveAppearanceImages = async () => {
     setEditImagePreview(null);
   } catch (error) {
     toast.error("Error updating item");
+  } finally {
+    setSavingEditItem(false); // ✅ End saving
   }
 };
 
@@ -378,6 +406,7 @@ const handleSaveAppearanceImages = async () => {
       toast.error("Invalid section or item ID");
       return;
     }
+    setDeletingItem(true);
     try {
       const res = await axiosInstance.delete(
         `/category/${activeCategory._id}/checklist/${sectionId}/item/${itemId}`
@@ -389,7 +418,9 @@ const handleSaveAppearanceImages = async () => {
       toast.success("Item deleted!");
     } catch (error) {
       toast.error("Error deleting item");
-    }
+    } finally {
+    setDeletingItem(false); // ✅ End deleting
+  }
   };
 
   useEffect(() => {
@@ -521,9 +552,15 @@ const handleSaveAppearanceImages = async () => {
                 />
               </div>
               <div className="modal-action">
-                <button type="submit" className="btn btn-primary transition-transform hover:scale-105">
-                  Save
-                </button>
+             <button type="submit" className="btn btn-primary transition-transform hover:scale-105" disabled={savingCategory}>
+  {savingCategory ? (
+    <>
+      <div className="loading loading-spinner loading-sm"></div> Saving...
+    </>
+  ) : (
+    "Save"
+  )}
+</button>
                 <button
                   type="button"
                   className="btn transition-transform hover:scale-105"
@@ -609,11 +646,18 @@ const handleSaveAppearanceImages = async () => {
     </div>
     <div className="mt-4 flex justify-end">
       <button
-        className="btn btn-success btn-sm"
-        onClick={handleSaveAppearanceImages}
-      >
-        Save Appearance Images
-      </button>
+  className="btn btn-success btn-sm"
+  onClick={handleSaveAppearanceImages}
+  disabled={savingAppearance}
+>
+  {savingAppearance ? (
+    <>
+      <div className="loading loading-spinner loading-sm"></div> Saving...
+    </>
+  ) : (
+    "Save Appearance Images"
+  )}
+</button>
     </div>
   </div>
 </div>
@@ -837,14 +881,21 @@ const handleSaveAppearanceImages = async () => {
             })()}
             <div className="modal-action">
               <button
-                className="btn btn-error transition-transform hover:scale-105"
-                onClick={() => {
-                  handleDeleteSection(targetSection);
-                  setDeleteSectionModalOpen(false);
-                }}
-              >
-                Yes, Delete
-              </button>
+  className="btn btn-error transition-transform hover:scale-105"
+  onClick={() => {
+    handleDeleteSection(targetSection);
+    setDeleteSectionModalOpen(false);
+  }}
+  disabled={deletingSection}
+>
+  {deletingSection ? (
+    <>
+      <div className="loading loading-spinner loading-sm"></div> Deleting...
+    </>
+  ) : (
+    "Yes, Delete"
+  )}
+</button>
               <button
                 className="btn transition-transform hover:scale-105"
                 onClick={() => setDeleteSectionModalOpen(false)}
@@ -876,14 +927,21 @@ const handleSaveAppearanceImages = async () => {
             })()}
             <div className="modal-action">
               <button
-                className="btn btn-error transition-transform hover:scale-105"
-                onClick={() => {
-                  handleDeleteItem(targetSection, targetItem);
-                  setDeleteItemModalOpen(false);
-                }}
-              >
-                Yes, Delete
-              </button>
+  className="btn btn-error transition-transform hover:scale-105"
+  onClick={() => {
+    handleDeleteItem(targetSection, targetItem);
+    setDeleteItemModalOpen(false);
+  }}
+  disabled={deletingItem}
+>
+  {deletingItem ? (
+    <>
+      <div className="loading loading-spinner loading-sm"></div> Deleting...
+    </>
+  ) : (
+    "Yes, Delete"
+  )}
+</button>
               <button
                 className="btn transition-transform hover:scale-105"
                 onClick={() => setDeleteItemModalOpen(false)}
@@ -918,9 +976,15 @@ const handleSaveAppearanceImages = async () => {
                 />
               </div>
               <div className="modal-action">
-                <button type="submit" className="btn btn-primary transition-transform hover:scale-105">
-                  Save
-                </button>
+               <button type="submit" className="btn btn-primary transition-transform hover:scale-105" disabled={savingSection}>
+  {savingSection ? (
+    <>
+      <div className="loading loading-spinner loading-sm"></div> Saving...
+    </>
+  ) : (
+    "Save"
+  )}
+</button>
                 <button
                   type="button"
                   className="btn transition-transform hover:scale-105"
@@ -1049,9 +1113,15 @@ const handleSaveAppearanceImages = async () => {
 
               <div className="modal-action">
                 {/* ✅ Button type="submit" so Enter also triggers it */}
-                <button type="submit" className="btn btn-primary transition-transform hover:scale-105">
-                  Save
-                </button>
+               <button type="submit" className="btn btn-primary transition-transform hover:scale-105" disabled={savingItem}>
+  {savingItem ? (
+    <>
+      <div className="loading loading-spinner loading-sm"></div> Saving...
+    </>
+  ) : (
+    "Save"
+  )}
+</button>
                 <button
                   type="button"
                   className="btn transition-transform hover:scale-105"
@@ -1077,14 +1147,21 @@ const handleSaveAppearanceImages = async () => {
             )}
             <div className="modal-action">
               <button
-                className="btn btn-error transition-transform hover:scale-105"
-                onClick={() => {
-                  handleDelete(targetCategory._id);
-                  setDeleteCategoryModalOpen(false);
-                }}
-              >
-                Yes, Delete
-              </button>
+  className="btn btn-error transition-transform hover:scale-105"
+  onClick={() => {
+    handleDelete(targetCategory._id);
+    setDeleteCategoryModalOpen(false);
+  }}
+  disabled={deletingCategory}
+>
+  {deletingCategory ? (
+    <>
+      <div className="loading loading-spinner loading-sm"></div> Deleting...
+    </>
+  ) : (
+    "Yes, Delete"
+  )}
+</button>
               <button
                 className="btn transition-transform hover:scale-105"
                 onClick={() => setDeleteCategoryModalOpen(false)}
@@ -1213,9 +1290,15 @@ const handleSaveAppearanceImages = async () => {
         </div>
 
         <div className="modal-action">
-          <button type="submit" className="btn btn-primary transition-transform hover:scale-105">
-            Save Changes
-          </button>
+          <button type="submit" className="btn btn-primary transition-transform hover:scale-105" disabled={savingEditItem}>
+  {savingEditItem ? (
+    <>
+      <div className="loading loading-spinner loading-sm"></div> Saving...
+    </>
+  ) : (
+    "Save Changes"
+  )}
+</button>
           <button
             type="button"
             className="btn transition-transform hover:scale-105"
