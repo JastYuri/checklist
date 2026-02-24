@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 
-// ✅ Add API_BASE_URL (adjust if needed; matches your Category component)
-const API_BASE_URL = 'http://localhost:5000';
 
 // ✅ Import special checklists
 import AppearanceChecklist from "./appearanceChecklist";
@@ -163,10 +161,10 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
                           <td className="text-center">
                             {item.image ? (
                               <img
-                                src={`${API_BASE_URL}${item.image}`}
+                                src={item.image}
                                 alt={item.name}
                                 className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform mx-auto"
-                                onClick={() => openImagePreview(`${API_BASE_URL}${item.image}`)}
+                                 onClick={() => openImagePreview(item.image)}
                               />
                             ) : (
                               <span className="text-gray-400 text-sm">No Image</span>

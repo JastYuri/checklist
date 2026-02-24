@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Eye, Download, Trash2, X, Upload, Check } from 'lucide-react'; // ✅ Added icons for buttons (Eye for view, Download for download, Trash2 for delete, X for close/cancel, Upload for upload, Check for confirm)
 
-const API_BASE_URL = 'http://localhost:5000'; // Adjust as needed
 
 const Manual = () => {
   const [manuals, setManuals] = useState([]);
@@ -19,7 +18,7 @@ const Manual = () => {
   // Fetch manuals
   const fetchManuals = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/manual`);
+      const response = await axios.get(/api/manual);
       setManuals(response.data.manuals || []);
     } catch (err) {
       console.log('Error fetching manuals:', err.message);
@@ -52,7 +51,7 @@ const Manual = () => {
     formData.append('manual', selectedFile);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/manual/upload`, formData, {
+      const response = await axios.post(/api/manual/upload, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setManuals(prev => [response.data.manual, ...prev]);
@@ -81,7 +80,7 @@ const Manual = () => {
   const confirmDelete = async () => {
     setShowDeleteConfirm(false);
     try {
-      await axios.delete(`${API_BASE_URL}/api/manual/${manualToDelete.id}`);
+      await axios.delete(`/api/manual/${manualToDelete.id}`);
       setManuals(prev => prev.filter(m => m.id !== manualToDelete.id));
       console.log('Manual deleted successfully!');
     } catch (err) {
@@ -138,7 +137,7 @@ const Manual = () => {
                   <Eye size={16} className="mr-1" /> View
                 </button>
                 <a
-                  href={`${API_BASE_URL}${manual.url}`}
+                  href={manual.url}
                   download={manual.name}
                   className="btn btn-secondary btn-sm"
                 >
@@ -166,7 +165,7 @@ const Manual = () => {
           <div className="modal-box max-w-4xl">
             <h3 className="font-bold text-lg mb-4">{viewingManual.name}</h3>
             <iframe
-              src={`${API_BASE_URL}${viewingManual.url}`}
+              src={`${viewingManual.url}`}
               width="100%"
               height="500px"
               className="border rounded"

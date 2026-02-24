@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 
-// ✅ Add API_BASE_URL for dynamic images
-const API_BASE_URL = 'http://localhost:5000';
 
 const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => { // ✅ Props: data (marks array), onChange, onSave, appearanceImages
   const [marks, setMarks] = useState(data || []); // ✅ data is the marks array
@@ -18,13 +16,12 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => { 
 
   const sides = ['front', 'rear', 'left', 'right'];
 
-  // ✅ Updated: Use dynamic images from prop, with fallbacks to defaults
-  const images = {
-    front: appearanceImages?.front ? `${API_BASE_URL}${appearanceImages.front}` : '/images/front-draft.png',
-    rear: appearanceImages?.rear ? `${API_BASE_URL}${appearanceImages.rear}` : '/images/rear-draft.png',
-    left: appearanceImages?.left ? `${API_BASE_URL}${appearanceImages.left}` : '/images/left-draft.png',
-    right: appearanceImages?.right ? `${API_BASE_URL}${appearanceImages.right}` : '/images/right-draft.png',
-  };
+const images = {
+  front: appearanceImages?.front || '/images/front-draft.png',
+  rear: appearanceImages?.rear || '/images/rear-draft.png',
+  left: appearanceImages?.left || '/images/left-draft.png',
+  right: appearanceImages?.right || '/images/right-draft.png',
+};
 
   // Predefined defect codes (expand as needed)
   const defectOptions = [

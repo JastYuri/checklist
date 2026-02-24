@@ -3,6 +3,23 @@ import Job from "../models/Job.js";
 import path from "path";
 import fs from "fs";
 
+// ✅ Helper function to get image path (handles both local and Cloudinary URLs)
+const getImagePath = (imageUrl) => {
+  if (!imageUrl) return null;
+  
+  // If it's already a full URL (Cloudinary), return as-is
+  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+    return imageUrl;
+  }
+  
+  // Otherwise, it's a local file path
+  const localPath = path.resolve(`uploads/${path.basename(imageUrl)}`);
+  if (fs.existsSync(localPath)) {
+    return localPath;
+  }
+  return null;
+};
+
 export const generateJobReport = async (req, res) => {
   try {
     const { id } = req.params;
@@ -275,7 +292,8 @@ const positions = [
 
 positions.forEach(pos => {
   const sideMarks = job.appearanceMarks?.filter(mark => mark.side === pos.side) || [];
-  const imagePath = job.appearanceImages?.[pos.side] ? path.resolve(`uploads/${path.basename(job.appearanceImages[pos.side])}`) : null;
+  // ✅ After
+const imagePath = getImagePath(job.appearanceImages?.[pos.side]);
 
   // Draw image or placeholder
   if (imagePath) {
@@ -522,18 +540,20 @@ sides.forEach(side => {
       }
       doc.text(cells[4], summaryColX[4] + 5, summaryY + 7, { width: summaryColWidths[4] - 10, align: "center" });
       // Draw image if available, else "N/A"
-      if (defect.image) {
-        const imagePath = path.resolve(`uploads/${path.basename(defect.image)}`);
-        if (fs.existsSync(imagePath)) {
-          const imageX = summaryColX[5] + (summaryColWidths[5] - 40) / 2; // Center horizontally (40px image width)
-          const imageY = summaryY + (dynamicRowHeight - 40) / 2; // Center vertically (40px image height)
-          doc.image(imagePath, imageX, imageY, { width: 40, height: 40 });
-        } else {
-          doc.text("Image not found", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
-        }
-      } else {
-        doc.text("N/A", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
-      }
+     // ✅ After
+const defectImagePath = getImagePath(defect.image);
+if (defectImagePath) {
+  try {
+    const imageX = summaryColX[5] + (summaryColWidths[5] - 40) / 2;
+    const imageY = summaryY + (dynamicRowHeight - 40) / 2;
+    doc.image(defectImagePath, imageX, imageY, { width: 40, height: 40 });
+  } catch (imgErr) {
+    console.error("Error loading defect image:", imgErr.message);
+    doc.text("Image error", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
+  }
+} else {
+  doc.text("N/A", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
+} 
 
       // Draw row borders with dynamic height
       doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();

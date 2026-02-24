@@ -178,7 +178,7 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {sides.map(side => {
           const sideMarks = appearanceMarks?.filter(mark => mark.side === side) || [];
-          const imageUrl = appearanceImages?.[side] ? `http://localhost:5000${appearanceImages[side]}` : null;
+          const imageUrl = appearanceImages?.[side] || null;
           
           return (
             <div key={side} className="card bg-base-200 shadow-md">
@@ -333,13 +333,13 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
                   </td>
                   <td className="text-center">{defect.recurrence || 0}</td>
                   <td className="text-center">
-                    {defect.image ? (
-                      <img
-                        src={`http://localhost:5000${defect.image}`}
-                        alt="Defect"
-                        className="w-12 h-12 object-cover rounded mx-auto"
-                      />
-                    ) : 'N/A'}
+                   {defect.image ? (
+  <img
+    src={defect.image}
+    alt="Defect"
+    className="w-12 h-12 object-cover rounded mx-auto"
+  />
+) : 'N/A'}
                   </td>
                 </tr>
               ))}

@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 
-// ✅ Add API_BASE_URL for dynamic images (if needed for existing images)
-const API_BASE_URL = 'http://localhost:5000';
+
 
 const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // ✅ Added openImagePreview prop for modal integration
   const [defects, setDefects] = useState(data || [{ no: 1, defectCode: '', defectEncountered: '', status: '', image: null, recurrence: 0 }]);
@@ -158,12 +157,12 @@ const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // 
                       />
                     ) : (
                       // For existing images (e.g., from backend)
-                      <img
-                        src={`${API_BASE_URL}${defect.image}`}
-                        alt="Defect"
-                        className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform mx-auto"
-                        onClick={() => openPreview(`${API_BASE_URL}${defect.image}`)} // ✅ Opens preview modal
-                      />
+                     <img
+  src={defect.image}
+  alt="Defect"
+  className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform mx-auto"
+  onClick={() => openPreview(defect.image)} // ✅ Opens preview modal
+/>
                     )
                   ) : (
                     <span className="text-gray-400 text-sm">No Image</span>

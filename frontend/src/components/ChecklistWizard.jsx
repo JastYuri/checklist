@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
 
-// ✅ Add API_BASE_URL (adjust if needed; matches your Category component)
-const API_BASE_URL = 'http://localhost:5000';
+
 
 
 
@@ -319,10 +318,10 @@ const ChecklistWizard = ({
                     <td className="text-center">
                       {item.image ? (
                         <img
-                          src={`${API_BASE_URL}${item.image}`}
+                          src={item.image}
                           alt={item.name}
                           className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform mx-auto"
-                          onClick={() => openImagePreview(`${API_BASE_URL}${item.image}`)}
+                          onClick={() => openImagePreview(item.image)}
                         />
                       ) : (
                         <span className="text-gray-400 text-sm">No Image</span>
@@ -514,10 +513,10 @@ const ChecklistWizard = ({
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                               {item.image && (
                                 <img
-                                  src={`${API_BASE_URL}${item.image}`}
+                                  src={item.image}
                                   alt={item.name}
                                   className="w-10 h-10 object-cover rounded cursor-pointer hover:scale-105 transition-transform shrink-0"
-                                  onClick={() => openImagePreview(`${API_BASE_URL}${item.image}`)}
+                                  onClick={() => openImagePreview(item.image)}
                                 />
                               )}
                               <div className="flex flex-col">
@@ -560,7 +559,7 @@ const ChecklistWizard = ({
             key={side}
             side={side}
             marks={sideMarks}
-            imageSrc={appearanceImages?.[side] ? `${API_BASE_URL}${appearanceImages[side]}` : '/images/default-appearance.jpg'}
+           imageSrc={appearanceImages?.[side] || '/images/default-appearance.jpg'}
           />
         );
       })}

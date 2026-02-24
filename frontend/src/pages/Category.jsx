@@ -4,8 +4,7 @@ import toast, { Toaster } from "react-hot-toast";
 import { toRoman } from "../utils/roman";
 import { Plus, Trash2, Edit, Search, Image, Eye, X } from "lucide-react"; // ✅ Added Image, Eye, X icons for image features
 
-// ✅ Base URL for images (derived from your axios baseURL, without /api)
-const API_BASE_URL = 'http://localhost:5000';
+
 
 export default function Category() {
 
@@ -123,12 +122,12 @@ const handleManageChecklist = async (cat) => {
       left: null,
       right: null,
     });
-    setAppearanceImagePreviews({
-      front: res.data.appearanceImages?.front ? `${API_BASE_URL}${res.data.appearanceImages.front}` : null,
-      rear: res.data.appearanceImages?.rear ? `${API_BASE_URL}${res.data.appearanceImages.rear}` : null,
-      left: res.data.appearanceImages?.left ? `${API_BASE_URL}${res.data.appearanceImages.left}` : null,
-      right: res.data.appearanceImages?.right ? `${API_BASE_URL}${res.data.appearanceImages.right}` : null,
-    });
+   setAppearanceImagePreviews({
+  front: res.data.appearanceImages?.front || null,
+  rear: res.data.appearanceImages?.rear || null,
+  left: res.data.appearanceImages?.left || null,
+  right: res.data.appearanceImages?.right || null,
+});
     setChecklistModalOpen(true);
 
     localStorage.setItem("selectedCategory", JSON.stringify(res.data)); // sync with JobForm
@@ -645,12 +644,12 @@ const handleSaveAppearanceImages = async () => {
       <div className="flex items-center gap-3 flex-1 min-w-0">
         {item.image && (
           <img
-            src={`${API_BASE_URL}${item.image}`}
+            src={item.image}
             alt={item.name}
             className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform shrink-0"
             onClick={(e) => {
               e.stopPropagation();
-              handleViewImage(`${API_BASE_URL}${item.image}`);
+              handleViewImage(item.image);
             }}
           />
         )}
@@ -664,7 +663,7 @@ const handleSaveAppearanceImages = async () => {
             className="btn btn-xs btn-info btn-outline hover:btn-solid transition-all hover:scale-105"
             onClick={(e) => {
               e.stopPropagation();
-              handleViewImage(`${API_BASE_URL}${item.image}`);
+              handleViewImage(item.image);
             }}
           >
             <Eye size={14} />
@@ -705,12 +704,12 @@ const handleSaveAppearanceImages = async () => {
           <div className="flex items-center gap-3 flex-1 min-w-0">
             {sub.image && (
               <img
-                src={`${API_BASE_URL}${sub.image}`}
+                src={sub.image}
                 alt={sub.name}
                 className="w-8 h-8 object-cover rounded cursor-pointer hover:scale-105 transition-transform shrink-0"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleViewImage(`${API_BASE_URL}${sub.image}`);
+                  handleViewImage(sub.image);
                 }}
               />
             )}
@@ -722,7 +721,7 @@ const handleSaveAppearanceImages = async () => {
                 className="btn btn-xs btn-info btn-outline hover:btn-solid transition-all hover:scale-105"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleViewImage(`${API_BASE_URL}${sub.image}`);
+                  handleViewImage(sub.image);
                 }}
               >
                 <Eye size={12} />
@@ -1204,7 +1203,7 @@ const handleSaveAppearanceImages = async () => {
             <div className="mt-2">
               <label className="label text-sm sm:text-base">Current Image</label>
               <img
-                src={`${API_BASE_URL}${editingItem.image}`}
+                src={editingItem.image}
                 alt="Current"
                 className="w-20 h-20 object-cover rounded"
               />

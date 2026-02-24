@@ -1,62 +1,26 @@
 // controllers/Category.js
 import Category from "../models/Category.js";
 import mongoose from "mongoose";
-import multer from "multer"; // ✅ New: For file uploads
-import path from "path"; // ✅ New: For file paths
-import fs from "fs"; // ✅ New: For filesystem operations
+import cloudinary from "../config/cloudinary.js"; // ✅ Import for deletion
 
-// ✅ New: Ensure uploads folder exists
-const uploadsDir = path.join(process.cwd(), 'uploads'); // Use process.cwd() for project root
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// ✅ REMOVED: All local multer config - now handled by cloudinary.js
 
-// ✅ New: Configure multer for local storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir); // Save to uploads/ folder
-  },
-  filename: (req, file, cb) => {
-    // Generate unique filename (timestamp + original name)
-    const uniqueName = Date.now() + '-' + file.originalname.replace(/[^a-zA-Z0-9.]/g, ''); // Sanitize filename
-    cb(null, uniqueName);
-  }
-});
-
-// ✅ New: File filter (only images)
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('Only JPG, PNG, and GIF files are allowed'), false);
-  }
-};
-
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
-});
-
-// ✅ Export upload for use in routes
-export { upload };
+// ✅ REMOVED: upload export - now imported from cloudinary.js
 
 // Create a new category
 export const createCategory = async (req, res) => {
   try {
     const { name, description, parent, checklist } = req.body;
 
-    // ✅ Normalize checklist items so they always start clean, including type and value
     const normalizedChecklist = (checklist || []).map((sec, idx) => ({
       section: sec.section || sec.name || sec.title,
-      order: idx + 1, // ✅ assign order based on position
+      order: idx + 1,
       items: (sec.items || []).map(item => ({
         name: item.name,
-        type: item.type || "status", // ✅ Include type (default to "status")
-        status: "na",       // always reset to "na"
-        remarks: "",         // always clear remarks
-        value: item.value || "" // ✅ Include value (default to empty string)
+        type: item.type || "status",
+        status: "na",
+        remarks: "",
+        value: item.value || ""
       }))
     }));
 
@@ -69,17 +33,13 @@ export const createCategory = async (req, res) => {
 
     res.status(201).json(category);
   } catch (error) {
-    // ✅ Handle duplicate key error
     if (error.code === 11000) {
-      return res
-        .status(400)
-        .json({ message: "Category name already exists under this parent" });
+      return res.status(400).json({ message: "Category name already exists under this parent" });
     }
     res.status(500).json({ message: error.message });
   }
 };
 
-// ✅ Updated: getCategories to include image field
 export const getCategories = async (req, res) => {
   try {
     const categories = await Category.find().lean();
@@ -94,20 +54,19 @@ export const getCategories = async (req, res) => {
             items: (sec.items || []).map(item => ({
               _id: item._id,
               name: item.name,
-              type: item.type, // ✅ Include type
+              type: item.type,
               status: item.status,
               remarks: item.remarks,
-              value: item.value, // ✅ Include value
-              parentItem: item.parentItem,   // ✅ keep parent reference
-              code: item.code,               // ✅ keep code
-              image: item.image              // ✅ New: Include image field
+              value: item.value,
+              parentItem: item.parentItem,
+              code: item.code,
+              image: item.image
             }))
           }))
           .sort((a, b) => a.order - b.order);
       }
     });
 
-    // Build children array
     const categoriesMap = {};
     categories.forEach(cat => {
       categoriesMap[cat._id] = { ...cat, children: [] };
@@ -128,7 +87,6 @@ export const getCategories = async (req, res) => {
   }
 };
 
-// Delete a category
 export const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
@@ -140,7 +98,6 @@ export const deleteCategory = async (req, res) => {
   }
 };
 
-// Add a new section to a category
 export const addChecklistSection = async (req, res) => {
   try {
     const { id } = req.params;
@@ -149,7 +106,6 @@ export const addChecklistSection = async (req, res) => {
     const category = await Category.findById(id);
     if (!category) return res.status(404).json({ message: "Category not found" });
 
-    // ✅ Determine next order number
     const nextOrder =
       category.checklist.length > 0
         ? Math.max(...category.checklist.map(sec => sec.order || 0)) + 1
@@ -164,11 +120,11 @@ export const addChecklistSection = async (req, res) => {
   }
 };
 
-// ✅ Updated: addChecklistItem with image upload support
+// ✅ Updated: addChecklistItem - Now uses Cloudinary URL
 export const addChecklistItem = async (req, res) => {
   try {
     const { id, sectionId } = req.params;
-    const { name, type, parentItem } = req.body; // ✅ Added type to destructuring
+    const { name, type, parentItem } = req.body;
 
     const category = await Category.findById(id);
     if (!category) return res.status(404).json({ message: "Category not found" });
@@ -178,33 +134,32 @@ export const addChecklistItem = async (req, res) => {
 
     let code = "";
     if (parentItem) {
-      code = ""; // sub-item → no numbering
+      code = "";
     } else {
       const itemIndex = section.items.filter(i => !i.parentItem).length + 1;
       code = `${section.order}${itemIndex}`;
     }
 
-    // ✅ validate parentItem before casting
     let parentRef = null;
     if (parentItem && mongoose.Types.ObjectId.isValid(parentItem)) {
       parentRef = new mongoose.Types.ObjectId(parentItem);
     }
 
-    // ✅ New: Handle image upload
+    // ✅ CHANGE: Use Cloudinary URL directly (req.file.path contains the URL)
     let imagePath = null;
     if (req.files && req.files.image && req.files.image[0]) {
-      imagePath = `/uploads/${req.files.image[0].filename}`; // Relative path for serving (e.g., /uploads/1640995200000-image.jpg)
+      imagePath = req.files.image[0].path; // This is now a Cloudinary URL!
     }
 
     const newItem = {
       name,
-      type: type || "status", // ✅ Include type (default to "status")
+      type: type || "status",
       status: "na",
       remarks: "",
-      value: "", // ✅ Include value (default to empty string)
+      value: "",
       parentItem: parentRef,
       code,
-      image: imagePath, // ✅ New: Save image path
+      image: imagePath,
     };
 
     section.items.push(newItem);
@@ -217,7 +172,6 @@ export const addChecklistItem = async (req, res) => {
   }
 };
 
-// Bulk update checklist (replace entire structure)
 export const updateChecklist = async (req, res) => {
   try {
     const { id } = req.params;
@@ -236,7 +190,6 @@ export const updateChecklist = async (req, res) => {
   }
 };
 
-// ✅ Updated: getCategoryById to include image field
 export const getCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -252,13 +205,13 @@ export const getCategoryById = async (req, res) => {
           items: (sec.items || []).map(item => ({
             _id: item._id,
             name: item.name,
-            type: item.type, // ✅ Include type
+            type: item.type,
             status: item.status,
             remarks: item.remarks,
-            value: item.value, // ✅ Include value
-            parentItem: item.parentItem,   // ✅ keep parent reference
-            code: item.code,               // ✅ keep code
-            image: item.image              // ✅ New: Include image field
+            value: item.value,
+            parentItem: item.parentItem,
+            code: item.code,
+            image: item.image
           }))
         }))
         .sort((a, b) => a.order - b.order);
@@ -273,10 +226,9 @@ export const getCategoryById = async (req, res) => {
   }
 };
 
-// Delete a checklist section by section _id
 export const deleteChecklistSection = async (req, res) => {
   try {
-    const { id, sectionId } = req.params; // category id + section _id
+    const { id, sectionId } = req.params;
 
     const category = await Category.findByIdAndUpdate(
       id,
@@ -291,26 +243,28 @@ export const deleteChecklistSection = async (req, res) => {
   }
 };
 
-// ✅ Optional: Enhanced deleteChecklistItem to remove image file from disk
+// ✅ Updated: deleteChecklistItem - Now deletes from Cloudinary
 export const deleteChecklistItem = async (req, res) => {
   try {
     const { id, sectionId, itemId } = req.params;
 
-    // Find the item before deleting to get the image path
     const category = await Category.findOne({ _id: id, "checklist._id": sectionId });
     if (!category) return res.status(404).json({ message: "Category or section not found" });
 
     const section = category.checklist.id(sectionId);
     const item = section.items.id(itemId);
+    
+    // ✅ CHANGE: Delete from Cloudinary using public_id
     if (item && item.image) {
-      // Remove the file from disk
-      const filePath = path.join(uploadsDir, path.basename(item.image));
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      try {
+        // Extract public_id from Cloudinary URL
+        const publicId = item.image.split('/').pop().split('.')[0];
+        await cloudinary.uploader.destroy(publicId);
+      } catch (cloudErr) {
+        console.error("Error deleting from Cloudinary:", cloudErr);
       }
     }
 
-    // Proceed with deletion
     const updatedCategory = await Category.findOneAndUpdate(
       { _id: id, "checklist._id": sectionId },
       { $pull: { "checklist.$.items": { _id: itemId } } },
@@ -324,11 +278,11 @@ export const deleteChecklistItem = async (req, res) => {
   }
 };
 
-// ✅ New: Update an existing item (e.g., add/change image)
+// ✅ Updated: updateChecklistItem - Now uses Cloudinary
 export const updateChecklistItem = async (req, res) => {
   try {
     const { id, sectionId, itemId } = req.params;
-    const { name, type } = req.body; // Optional fields to update
+    const { name, type } = req.body;
 
     const category = await Category.findById(id);
     if (!category) return res.status(404).json({ message: "Category not found" });
@@ -339,20 +293,22 @@ export const updateChecklistItem = async (req, res) => {
     const item = section.items.id(itemId);
     if (!item) return res.status(404).json({ message: "Item not found" });
 
-    // Update fields if provided
     if (name) item.name = name;
     if (type) item.type = type;
 
-    // Handle image update
+    // ✅ CHANGE: Handle image upload from Cloudinary
     if (req.files && req.files.image && req.files.image[0]) {
-      // Remove old image file if it exists
+      // Delete old image from Cloudinary
       if (item.image) {
-        const oldPath = path.join(uploadsDir, path.basename(item.image));
-        if (fs.existsSync(oldPath)) {
-          fs.unlinkSync(oldPath);
+        try {
+          const publicId = item.image.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(publicId);
+        } catch (cloudErr) {
+          console.error("Error deleting old image from Cloudinary:", cloudErr);
         }
       }
-      item.image = `/uploads/${req.files.image[0].filename}`;
+      // Save new Cloudinary URL
+      item.image = req.files.image[0].path;
     }
 
     await category.save();
@@ -363,7 +319,7 @@ export const updateChecklistItem = async (req, res) => {
   }
 };
 
-// ✅ New: Update appearance images for a category (front, rear, left, right)
+// ✅ Updated: updateAppearanceImages - Now uses Cloudinary
 export const updateAppearanceImages = async (req, res) => {
   try {
     const { id } = req.params;
@@ -371,26 +327,27 @@ export const updateAppearanceImages = async (req, res) => {
     const category = await Category.findById(id);
     if (!category) return res.status(404).json({ message: "Category not found" });
 
-    // Initialize appearanceImages if not exists
     if (!category.appearanceImages) {
       category.appearanceImages = { front: null, rear: null, left: null, right: null };
     }
 
-    // Handle each side's image upload
+    // ✅ CHANGE: Use for...of instead of forEach (allows await)
     const sides = ['front', 'rear', 'left', 'right'];
-    sides.forEach(side => {
+    for (const side of sides) {
       if (req.files && req.files[side] && req.files[side][0]) {
-        // Remove old image file if it exists
+        // Delete old image from Cloudinary
         if (category.appearanceImages[side]) {
-          const oldPath = path.join(uploadsDir, path.basename(category.appearanceImages[side]));
-          if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
+          try {
+            const publicId = category.appearanceImages[side].split('/').pop().split('.')[0];
+            await cloudinary.uploader.destroy(publicId);
+          } catch (cloudErr) {
+            console.error(`Error deleting old ${side} image from Cloudinary:`, cloudErr);
           }
         }
-        // Save new image path
-        category.appearanceImages[side] = `/uploads/${req.files[side][0].filename}`;
+        // Save new Cloudinary URL
+        category.appearanceImages[side] = req.files[side][0].path;
       }
-    });
+    }
 
     await category.save();
     res.json(category);
