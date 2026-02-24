@@ -18,7 +18,7 @@ const Manual = () => {
   // Fetch manuals
   const fetchManuals = async () => {
     try {
-      const response = await axios.get(/api/manual);
+      const response = await axios.get('/api/manual');
       setManuals(response.data.manuals || []);
     } catch (err) {
       console.log('Error fetching manuals:', err.message);
@@ -51,7 +51,7 @@ const Manual = () => {
     formData.append('manual', selectedFile);
 
     try {
-      const response = await axios.post(/api/manual/upload, formData, {
+      const response = await axios.post('/api/manual/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setManuals(prev => [response.data.manual, ...prev]);
