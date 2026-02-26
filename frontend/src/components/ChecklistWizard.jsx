@@ -82,12 +82,12 @@ const AppearancePreviewCanvas = ({ side, marks, imageSrc }) => {
   return (
     <div key={side}>
       <h5 className="font-semibold capitalize mb-2">{side} Side</h5>
-      <div className="relative mb-4">
+      <div className="relative mb-4 w-full aspect-video bg-base-300 rounded-lg overflow-hidden border">
         <img
           ref={imgRef}
           src={imageSrc}
           alt={`${side} side`}
-          className="w-full h-auto object-contain rounded border" // ✅ Removed max-h-96 to match edit mode sizing
+          className="w-full h-full object-contain" // ✅ Removed max-h-96 to match edit mode sizing
         />
         <canvas
           ref={canvasRef}
@@ -101,7 +101,7 @@ const AppearancePreviewCanvas = ({ side, marks, imageSrc }) => {
             <div className="flex items-center justify-between mb-2">
               <span className="font-semibold text-base-content">Defect {idx + 1} ({mark.type})</span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <span className="text-sm font-medium text-base-content/80">Defect Name:</span>
                 <p className="text-sm text-base-content mt-1">{mark.defectName || "N/A"}</p>
@@ -250,7 +250,7 @@ const ChecklistWizard = ({
 
   if (!checklist || checklist.length === 0) {
     return (
-      <div className="card bg-base-200 shadow-md p-6">
+      <div className="card bg-base-200 shadow-md p-4 md:p-6 w-full">
         <p className="text-center text-gray-500">No checklist available.</p>
       </div>
     );
@@ -259,14 +259,14 @@ const ChecklistWizard = ({
   const section = checklist[currentSection] || { section: "No section", items: [] };
 
   return (
-    <div className="card bg-base-200 shadow-md p-6">
+   <div className="card bg-base-200 shadow-md p-4 md:p-6 w-full">
       <h4 className="text-lg font-semibold mb-4">Job Checklist</h4>
 
       {/* Legend for Normal Checklist */}
       {specialStep === 0 && (
-        <div className="mb-4">
-          <h6 className="text-sm font-semibold mb-2">Legend:</h6>
-          <div className="flex space-x-6 text-sm">
+        <div className="mb-4 p-3 bg-base-100 rounded-lg">
+  <h6 className="text-sm font-semibold mb-2">Legend:</h6>
+  <div className="flex flex-wrap gap-3 md:gap-6 text-sm">
             <span>⭕ Good</span>
             <span>❌ No Good</span>
             <span>ⓧ Corrected</span>
@@ -277,9 +277,9 @@ const ChecklistWizard = ({
 
       {/* ✅ Conditional header based on step */}
       {specialStep === 0 ? (
-        <div className="flex items-center justify-between mb-2">
-          <h5 className="font-bold">Section: {section.section}</h5>
-        </div>
+       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
+  <h5 className="font-bold text-lg">Section: {section.section}</h5>
+</div>
       ) : (
         <div className="flex items-center justify-between mb-2">
           <h5 className="font-bold">
@@ -296,7 +296,8 @@ const ChecklistWizard = ({
       {specialStep === 0 ? (
         // Normal checklist table
         <>
-          <table className="table w-full border">
+          <div className="overflow-x-auto">
+  <table className="table w-full border min-w-150">
             <thead>
               <tr>
                 <th className="text-center">Reference</th>
@@ -407,6 +408,7 @@ const ChecklistWizard = ({
               )}
             </tbody>
           </table>
+          </div>
         </>
       ) : specialStep === 1 ? (
         <AppearanceChecklist
@@ -433,7 +435,7 @@ const ChecklistWizard = ({
       )}
 
       {/* Navigation - ✅ Updated for special steps */}
-      <div className="flex justify-between mt-6">
+      <div className="flex flex-col sm:flex-row justify-between mt-6 gap-3">
         {(currentSection > 0 && specialStep === 0) && (
           <button
             className="btn btn-secondary"
@@ -477,7 +479,7 @@ const ChecklistWizard = ({
       {/* Preview modal - ✅ Full details of all checklists */}
       {previewOpen && job && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-base-100 rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col">
+          <div className="bg-base-100 rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col max-h-[95vh] md:max-h-[90vh]">
             <div className="border-b border-base-300 px-6 py-4 sticky top-0 bg-base-100 z-10">
               <h3 className="text-xl font-semibold text-primary">Full Checklist Preview</h3>
               <p className="text-sm text-base-content/70">
@@ -485,7 +487,7 @@ const ChecklistWizard = ({
               </p>
             </div>
 
-            <div className="px-6 py-4 overflow-y-auto flex-1 space-y-6">
+            <div className="px-4 md:px-6 py-4 overflow-y-auto flex-1 space-y-6">
               {/* Normal checklist sections - Full details */}
               {checklist.map((sec) => (
                 <div
