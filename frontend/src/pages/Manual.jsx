@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Eye, Download, Trash2, X, Upload, Check } from 'lucide-react'; // ✅ Added icons for buttons (Eye for view, Download for download, Trash2 for delete, X for close/cancel, Upload for upload, Check for confirm)
-
-const API_BASE_URL = 'http://localhost:5000'; // Adjust as needed
+import axiosInstance from '../utils/axiosInstance'; // ✅ Import your axiosInstance
+import { Eye, Download, Trash2, X, Upload, Check } from 'lucide-react';
 
 const Manual = () => {
   const [manuals, setManuals] = useState([]);
@@ -10,7 +8,6 @@ const Manual = () => {
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState(null);
   const [viewingManual, setViewingManual] = useState(null);
-  // ✅ New states for confirmation modals
   const [showUploadConfirm, setShowUploadConfirm] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -19,7 +16,8 @@ const Manual = () => {
   // Fetch manuals
   const fetchManuals = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/manual`);
+      // ✅ Use axiosInstance instead of axios
+      const response = await axiosInstance.get("/manual");
       setManuals(response.data.manuals || []);
     } catch (err) {
       console.log('Error fetching manuals:', err.message);
@@ -31,7 +29,7 @@ const Manual = () => {
     fetchManuals().finally(() => setFetching(false));
   }, []);
 
-  // Handle file selection and show upload confirmation modal
+  // Handle file selection
   const handleFileSelect = (event) => {
     const file = event.target.files[0];
     if (!file || file.type !== 'application/pdf') {
@@ -52,7 +50,8 @@ const Manual = () => {
     formData.append('manual', selectedFile);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/api/manual/upload`, formData, {
+      // ✅ Use axiosInstance
+      const response = await axiosInstance.post("/manual/upload", formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setManuals(prev => [response.data.manual, ...prev]);
@@ -71,7 +70,7 @@ const Manual = () => {
     setSelectedFile(null);
   };
 
-  // Handle delete and show confirmation modal
+  // Handle delete
   const handleDeleteClick = (manual) => {
     setManualToDelete(manual);
     setShowDeleteConfirm(true);
@@ -81,7 +80,8 @@ const Manual = () => {
   const confirmDelete = async () => {
     setShowDeleteConfirm(false);
     try {
-      await axios.delete(`${API_BASE_URL}/api/manual/${manualToDelete.id}`);
+      // ✅ Use axiosInstance
+      await axiosInstance.delete(`/manual/${manualToDelete.id}`);
       setManuals(prev => prev.filter(m => m.id !== manualToDelete.id));
       console.log('Manual deleted successfully!');
     } catch (err) {
@@ -138,7 +138,8 @@ const Manual = () => {
                   <Eye size={16} className="mr-1" /> View
                 </button>
                 <a
-                  href={`${API_BASE_URL}${manual.url}`}
+                  // ✅ Use relative URL (served from same server in production)
+                  href={manual.url}
                   download={manual.name}
                   className="btn btn-secondary btn-sm"
                 >
@@ -166,7 +167,8 @@ const Manual = () => {
           <div className="modal-box max-w-4xl">
             <h3 className="font-bold text-lg mb-4">{viewingManual.name}</h3>
             <iframe
-              src={`${API_BASE_URL}${viewingManual.url}`}
+              // ✅ Use relative URL
+              src={viewingManual.url}
               width="100%"
               height="500px"
               className="border rounded"
@@ -181,7 +183,7 @@ const Manual = () => {
         </div>
       )}
 
-      {/* ✅ Upload Confirmation Modal */}
+      {/* Upload Confirmation Modal */}
       {showUploadConfirm && (
         <div className="modal modal-open">
           <div className="modal-box">
@@ -199,7 +201,7 @@ const Manual = () => {
         </div>
       )}
 
-      {/* ✅ Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="modal modal-open">
           <div className="modal-box">

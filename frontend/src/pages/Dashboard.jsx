@@ -304,7 +304,7 @@ export default function Dashboard() {
                 <button className="btn btn-sm btn-primary">
                   <Eye size={14} className="mr-1" /> View
                 </button>
-                <a href={`http://localhost:5000${manual.url}`} download={manual.name} className="btn btn-sm btn-secondary">
+               <a href={`${manual.url}`} download={manual.name} className="btn btn-sm btn-secondary">
                   <Download size={14} className="mr-1" /> Download
                 </a>
               </div>
