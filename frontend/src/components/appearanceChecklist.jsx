@@ -14,6 +14,9 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
   const imgRef = useRef(null);
   const [imgDimensions, setImgDimensions] = useState({ width: 0, height: 0 });
 
+  // Ref to store preloaded image objects for screenshot generation
+  const loadedImages = useRef({});
+
   // 🔽 NEW: Ref to track last valid coordinates for TouchEnd events
   const lastPos = useRef({ x: 0, y: 0 });
 
@@ -48,6 +51,31 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
     setMarks(syncedMarks);
   }, [data]);
 
+  // 🔽 NEW: Preload images to ensure we can generate screenshots at full resolution
+  useEffect(() => {
+    const loadImages = async () => {
+      const newImages = {};
+      for (const side of sides) {
+        const src = images[side];
+        if (src) {
+          try {
+            const img = new Image();
+            img.src = src;
+            await new Promise((resolve, reject) => {
+              img.onload = resolve;
+              img.onerror = reject;
+            });
+            newImages[side] = img;
+          } catch (e) {
+            console.error(`Failed to load image for ${side}`, e);
+          }
+        }
+      }
+      loadedImages.current = newImages;
+    };
+    loadImages();
+  }, [appearanceImages]);
+
   // Update canvas size and img dimensions when image loads or side changes
   useEffect(() => {
     const img = imgRef.current;
@@ -73,69 +101,53 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
     }
   }, [currentSide, marks, previewMark, draggedMarkIndex, isResizing]);
 
-  // 🔽 NEW: Helper to get X/Y from either Mouse or Touch events
-  const getCoords = (e) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-
-    let clientX, clientY;
-    if (e.touches && e.touches.length > 0) {
-      // Touch event
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      // Mouse event
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
-    const rect = canvas.getBoundingClientRect();
-    const x = (clientX - rect.left) / canvas.width;
-    const y = (clientY - rect.top) / canvas.height;
-
-    // Update ref for use in TouchEnd
-    lastPos.current = { x, y, rawX: clientX - rect.left, rawY: clientY - rect.top };
-
-    return { x, y, rawX: clientX - rect.left, rawY: clientY - rect.top };
+  // 🔽 NEW: Helper to draw marks on any canvas context (used by both live canvas and screenshot generator)
+  const drawMarksOnContext = (ctx, contextMarks, width, height) => {
+    ctx.clearRect(0, 0, width, height);
+    
+    contextMarks.forEach((mark) => {
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 2;
+      
+      if (mark.type === 'circle') {
+        ctx.beginPath();
+        ctx.arc(mark.x * width, mark.y * height, mark.radius * Math.min(width, height), 0, 2 * Math.PI);
+        ctx.stroke();
+        if (mark.defectName) {
+          ctx.fillStyle = 'red';
+          ctx.font = '16px Arial';
+          ctx.fillText(mark.defectName, mark.x * width + mark.radius * Math.min(width, height) + 5, mark.y * height - 5);
+        }
+      } else if (mark.type === 'path') {
+        ctx.beginPath();
+        mark.path.forEach((point, i) => {
+          const px = point.x * width;
+          const py = point.y * height;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        });
+        ctx.stroke();
+        if (mark.defectName && mark.path.length > 0) {
+          ctx.fillStyle = 'red';
+          ctx.font = '16px Arial';
+          ctx.fillText(mark.defectName, mark.path[0].x * width + 5, mark.path[0].y * height - 5);
+        }
+      }
+    });
   };
 
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    marks.filter(m => m.side === currentSide).forEach((mark) => {
-      const isSelected = draggedMarkIndex === marks.indexOf(mark);
-      ctx.strokeStyle = isSelected ? 'blue' : 'red';
-      ctx.lineWidth = isSelected ? 3 : 2;
-      
-      if (mark.type === 'circle') {
-        ctx.beginPath();
-        ctx.arc(mark.x * canvas.width, mark.y * canvas.height, mark.radius * Math.min(canvas.width, canvas.height), 0, 2 * Math.PI);
-        ctx.stroke();
-        if (mark.defectName) {
-          ctx.fillStyle = isSelected ? 'blue' : 'red';
-          ctx.font = '16px Arial';
-          ctx.fillText(mark.defectName, mark.x * canvas.width + mark.radius * Math.min(canvas.width, canvas.height) + 5, mark.y * canvas.height - 5);
-        }
-      } else if (mark.type === 'path') {
-        ctx.beginPath();
-        mark.path.forEach((point, i) => {
-          const px = point.x * canvas.width;
-          const py = point.y * canvas.height;
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        });
-        ctx.stroke();
-        if (mark.defectName && mark.path.length > 0) {
-          ctx.fillStyle = isSelected ? 'blue' : 'red';
-          ctx.font = '16px Arial';
-          ctx.fillText(mark.defectName, mark.path[0].x * canvas.width + 5, mark.path[0].y * canvas.height - 5);
-        }
-      }
-    });
+    // Filter marks for current side
+    const sideMarks = marks.filter(m => m.side === currentSide);
+    
+    // Use the shared helper
+    drawMarksOnContext(ctx, sideMarks, canvas.width, canvas.height);
 
+    // Handle preview mark (dragging/creating)
     if (previewMark) {
       ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
       ctx.setLineDash([5, 5]);
@@ -156,6 +168,39 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
       }
       ctx.setLineDash([]);
     }
+  };
+
+  // 🔽 NEW: Generate screenshots for all sides
+  const generateScreenshots = async () => {
+    const screenshots = {};
+    
+    for (const side of sides) {
+      const img = loadedImages.current[side];
+      if (!img) {
+        screenshots[side] = null;
+        continue;
+      }
+
+      // Create an off-screen canvas at the image's natural resolution
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+
+      // 1. Draw the background image
+      ctx.drawImage(img, 0, 0);
+
+      // 2. Draw the marks on top
+      const sideMarks = marks.filter(m => m.side === side);
+      // We pass a modified helper or just reuse logic. 
+      // Since we want "Red" marks, we can reuse drawMarksOnContext directly as it defaults to red.
+      drawMarksOnContext(ctx, sideMarks, canvas.width, canvas.height);
+
+      // 3. Export as Data URL
+      screenshots[side] = canvas.toDataURL('image/png');
+    }
+    
+    return screenshots;
   };
 
   const getMarkAtPosition = (x, y, checkEdge = false) => {
@@ -189,9 +234,6 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
 
   // Unified Handler for Start (Mouse & Touch)
   const handleStart = (e) => {
-    // Prevent default only inside canvas to allow scrolling outside
-    // Note: e.preventDefault() inside touchstart prevents mouse emulation
-    // but requires touch-action: none in CSS
     if (e.cancelable) e.preventDefault(); 
     
     const coords = getCoords(e);
@@ -338,6 +380,15 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
     setPreviewMark(null);
   };
 
+  // 🔽 MODIFIED: Updated onSave to include screenshots
+  const handleSave = async () => {
+    // Generate screenshots for all sides
+    const screenshots = await generateScreenshots();
+    
+    // Pass both the marks data and the generated images
+    onSave({ marks, appearanceMarkImages: screenshots });
+  };
+
   const deleteMark = (idx) => {
     const updatedMarks = marks.filter((_, i) => i !== idx);
     setMarks(updatedMarks);
@@ -350,7 +401,30 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
     onChange(updatedMarks);
   };
 
-  return (
+  // 🔽 NEW: Helper to get X/Y from either Mouse or Touch events
+  const getCoords = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    let clientX, clientY;
+    if (e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else {
+      clientX = e.clientX;
+      clientY = e.clientY;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (clientX - rect.left) / canvas.width;
+    const y = (clientY - rect.top) / canvas.height;
+
+    lastPos.current = { x, y, rawX: clientX - rect.left, rawY: clientY - rect.top };
+
+    return { x, y, rawX: clientX - rect.left, rawY: clientY - rect.top };
+  };
+
+   return (
     <div className="card bg-base-200 shadow-md p-4 md:p-6">
       <h4 className="text-lg font-semibold mb-4 text-warning">Appearance Checklist</h4>
       <p className="text-sm text-base-content/70 mb-4">
@@ -402,7 +476,7 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
           <ul className="space-y-3">
             {marks.filter(m => m.side === currentSide).map((mark, idx) => (
               <li key={idx} className="border border-base-300 p-3 rounded">
-                                <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 mb-2">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 mb-2">
                   <span className="font-medium text-sm md:text-base">Defect {idx + 1} ({mark.type}) - {mark.defectName}</span>
                   <button className="btn btn-sm btn-error w-full md:w-auto" onClick={() => deleteMark(marks.indexOf(mark))}>Delete</button>
                 </div>
@@ -439,9 +513,6 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
         )}
       </div>
 
-      <div className="flex flex-col md:flex-row justify-end mt-4 space-y-2 md:space-y-0 md:space-x-2">
-        <button className="btn btn-success w-full md:w-auto" onClick={() => onSave({ marks })}>Save Appearance Checklist</button>
-      </div>
     </div>
   );
 };

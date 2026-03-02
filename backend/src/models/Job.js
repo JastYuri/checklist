@@ -3,16 +3,16 @@ import mongoose from "mongoose";
 
 const { Schema } = mongoose;
 
-// Item subdocument schema (added type, value, and image for consistency)
+// Item subdocument schema
 const ItemSchema = new Schema({
   name: { type: String, required: true },
-  type: { type: String, enum: ["status", "input"], default: "status" }, // ✅ "status" or "input"
+  type: { type: String, enum: ["status", "input"], default: "status" }, 
   status: { type: String, enum: ["good", "noGood", "corrected", "na"], default: "na" },
   remarks: { type: String, default: "" },
-  value: { type: String, default: "" }, // ✅ For input-type items (e.g., serial numbers)
+  value: { type: String, default: "" }, 
   parentItem: { type: Schema.Types.ObjectId, ref: "Item", default: null },
   code: { type: String, default: "" },
-  image: { type: String, default: null }, // ✅ New: Path to locally stored image (e.g., "/uploads/filename.jpg")
+  image: { type: String, default: null }, 
 }, { _id: true });
 
 const SectionSchema = new Schema({
@@ -20,26 +20,27 @@ const SectionSchema = new Schema({
   items: [ItemSchema]
 }, { _id: true });
 
-// ✅ New subdocument schemas for special checklists
 const AppearanceMarkSchema = new Schema({
   side: { type: String, enum: ["front", "rear", "left", "right"], required: true },
+  type: { type: String, enum: ["circle", "path"], default: "circle" }, // Added type for circle vs freehand
   x: { type: Number, required: true },
   y: { type: Number, required: true },
-  defectName: { type: String, default: "" }, // e.g., "C", "SC", "D"
+  radius: { type: Number, default: 0.05 }, // Added radius for circles
+  path: { type: Array, default: [] }, // Added path for freehand drawings
+  defectName: { type: String, default: "" }, 
   remarks: { type: String, default: "" },
-  image: { type: String, default: null }, // ✅ New: Path to uploaded image for marked defects
+  image: { type: String, default: null }, 
 }, { _id: true });
 
 const DefectSummarySchema = new Schema({
   no: { type: Number, required: true },
-  defectCode: { type: String, default: "" }, // e.g., "🔧"
+  defectCode: { type: String, default: "" }, 
   defectEncountered: { type: String, default: "" },
-  status: { type: String, enum: ["good", "noGood", "corrected", "na"], default: "na" }, // ✅ Updated to match frontend
-  image: { type: String, default: null }, // Path to uploaded image
+  status: { type: String, enum: ["good", "noGood", "corrected", "na"], default: "na" }, 
+  image: { type: String, default: null }, 
   recurrence: { type: Number, default: 0 },
 }, { _id: true });
 
-// ✅ Updated: Technical tests as a nested object schema to match frontend
 const TechnicalTestsSchema = new Schema({
   breakingForce: {
     max: {
@@ -68,9 +69,8 @@ const TechnicalTestsSchema = new Schema({
     }
   },
   absTesting: [{ option: String, remarks: String }]
-}, { _id: false }); // No _id for nested object
+}, { _id: false }); 
 
-// ✅ New: Add appearanceImages field to Job schema (copied from Category)
 const JobSchema = new Schema({
   category: { type: Schema.Types.ObjectId, ref: "Category", required: true },
   categoryPath: [{ type: Schema.Types.ObjectId, ref: "Category" }],
@@ -87,17 +87,26 @@ const JobSchema = new Schema({
     jobType: { type: String, enum: ["standard", "modified"] }
   },
   checklist: [SectionSchema],
-  // ✅ New: Appearance images copied from category (for base vehicle images)
+  
+  // ✅ Base images for drawing
   appearanceImages: {
     front: { type: String, default: null },
     rear: { type: String, default: null },
     left: { type: String, default: null },
     right: { type: String, default: null },
   },
-  // ✅ Existing: Special checklists
-  appearanceMarks: [AppearanceMarkSchema], // Array of marked defects
-  defectSummary: [DefectSummarySchema], // Array of defects
-  technicalTests: TechnicalTestsSchema // ✅ Updated: Nested object for technical data
+
+  // ✅ NEW: Screenshots (Images with drawings)
+  appearanceMarkImages: {
+    front: { type: String, default: null },
+    rear: { type: String, default: null },
+    left: { type: String, default: null },
+    right: { type: String, default: null },
+  },
+
+  appearanceMarks: [AppearanceMarkSchema], 
+  defectSummary: [DefectSummarySchema], 
+  technicalTests: TechnicalTestsSchema 
 }, { timestamps: true });
 
 export default mongoose.model("Job", JobSchema);

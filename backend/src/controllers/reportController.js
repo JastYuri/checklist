@@ -2,17 +2,15 @@ import PDFDocument from "pdfkit";
 import Job from "../models/Job.js";
 import path from "path";
 import fs from "fs";
-import axios from "axios"; // ✅ Add axios for downloading images
+import axios from "axios";
 
 // ✅ Helper function to download image from URL to temp file
 const downloadImageToTemp = async (imageUrl) => {
   if (!imageUrl) return null;
   
   try {
-    // Download the image
     const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
     
-    // Create temp file path
     const tempDir = path.resolve("temp");
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
@@ -21,7 +19,6 @@ const downloadImageToTemp = async (imageUrl) => {
     const tempFileName = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}.jpg`;
     const tempFilePath = path.join(tempDir, tempFileName);
     
-    // Write to temp file
     fs.writeFileSync(tempFilePath, response.data);
     
     return tempFilePath;
@@ -46,7 +43,6 @@ const cleanupTempFile = (filePath) => {
 const getImagePath = async (imageUrl) => {
   if (!imageUrl) return null;
   
-  // If it's a local file path
   if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
     const localPath = path.resolve(`uploads/${path.basename(imageUrl)}`);
     if (fs.existsSync(localPath)) {
@@ -55,34 +51,49 @@ const getImagePath = async (imageUrl) => {
     return null;
   }
   
-  // If it's a Cloudinary URL, download to temp file
   return await downloadImageToTemp(imageUrl);
 };
 
 export const generateJobReport = async (req, res) => {
+  const tempFiles = []; // Track temp files for cleanup
+  
   try {
     const { id } = req.params;
     const job = await Job.findById(id).populate("category categoryPath").lean();
-    if (!job) return res.status(404).json({ message: "Job not found" });
+    
+    if (!job) {
+      return res.status(404).json({ message: "Job not found" });
+    }
 
     const doc = new PDFDocument({ margin: 30, size: "A4" });
 
+    // ✅ IMPORTANT: Handle errors before piping to response
+    doc.on('error', (err) => {
+      console.error('PDF Document Error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ message: 'Error generating PDF' });
+      }
+    });
+
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", "attachment");
+    res.setHeader("Content-Disposition", `attachment; filename="job-report-${id}.pdf"`);
 
     doc.pipe(res);
 
     // ✅ Function to draw the header
     const drawHeader = () => {
       const logoPath = path.resolve("public/logo.png");
-      doc.image(logoPath, 30, 30, { width: 80 });
+      
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 30, 30, { width: 80 });
+      }
 
       doc.fontSize(16).text("HINO MOTORS PHILIPPINE CORPORATION", 0, 40, { align: "center" });
       doc.fontSize(12).text("Manufacturing Division", { align: "center" });
       doc.text("QA Department", { align: "center" });
       doc.moveDown();
       doc.fontSize(14).text("FINAL INSPECTION CHECKLIST", { align: "center" });
-      doc.fontSize(12).text(`Category: ${job.category.name}`, { align: "center" });
+      doc.fontSize(12).text(`Category: ${job.category?.name || "N/A"}`, { align: "center" });
 
       doc.moveDown(2);
     };
@@ -112,22 +123,17 @@ export const generateJobReport = async (req, res) => {
       ];
 
       doc.font("Helvetica").fontSize(10);
+      
       leftData.forEach((text, idx) => {
         let y = startY + idx * rowHeight;
         doc.text(text, leftX + 5, y + 5, { width: tableWidth - 10 });
-        doc.moveTo(leftX, y).lineTo(leftX + tableWidth, y).stroke();
-        doc.moveTo(leftX, y + rowHeight).lineTo(leftX + tableWidth, y + rowHeight).stroke();
-        doc.moveTo(leftX, y).lineTo(leftX, y + rowHeight).stroke();
-        doc.moveTo(leftX + tableWidth, y).lineTo(leftX + tableWidth, y + rowHeight).stroke();
+        doc.rect(leftX, y, tableWidth, rowHeight).stroke();
       });
 
       rightData.forEach((text, idx) => {
         let y = startY + idx * rowHeight;
         doc.text(text, rightX + 5, y + 5, { width: tableWidth - 10 });
-        doc.moveTo(rightX, y).lineTo(rightX + tableWidth, y).stroke();
-        doc.moveTo(rightX, y + rowHeight).lineTo(rightX + tableWidth, y + rowHeight).stroke();
-        doc.moveTo(rightX, y).lineTo(rightX, y + rowHeight).stroke();
-        doc.moveTo(rightX + tableWidth, y).lineTo(rightX + tableWidth, y + rowHeight).stroke();
+        doc.rect(rightX, y, tableWidth, rowHeight).stroke();
       });
 
       doc.y = startY + leftData.length * rowHeight + 10;
@@ -140,6 +146,7 @@ export const generateJobReport = async (req, res) => {
     doc.fontSize(10).text("Legend:", 30, doc.y);
     let legendY = doc.y;
 
+    // ✅ FIXED: drawSymbol function using PDFKit's path() method
     const drawSymbol = (type, x, y) => {
       doc.save();
       switch (type) {
@@ -148,15 +155,12 @@ export const generateJobReport = async (req, res) => {
           break;
         case "nogood":
           doc.lineWidth(1);
-          doc.moveTo(x - 6, y - 6).lineTo(x + 6, y + 6);
-          doc.moveTo(x + 6, y - 6).lineTo(x - 6, y + 6);
-          doc.stroke();
+          // ✅ Use path() instead of beginPath/moveTo/lineTo chain
+          doc.path(`M ${x - 6} ${y - 6} L ${x + 6} ${y + 6} M ${x + 6} ${y - 6} L ${x - 6} ${y + 6}`).stroke();
           break;
         case "corrected":
           doc.circle(x, y, 6).stroke();
-          doc.moveTo(x - 4, y - 4).lineTo(x + 4, y + 4);
-          doc.moveTo(x + 4, y - 4).lineTo(x - 4, y + 4);
-          doc.stroke();
+          doc.path(`M ${x - 4} ${y - 4} L ${x + 4} ${y + 4} M ${x + 4} ${y - 4} L ${x - 4} ${y + 4}`).stroke();
           break;
         case "na":
           doc.font("Helvetica").fontSize(10).text("N/A", x - 10, y - 5);
@@ -164,6 +168,7 @@ export const generateJobReport = async (req, res) => {
       }
       doc.restore();
     };
+    
     drawSymbol("good", 30 + 60, legendY + 5);
     doc.text("Good", 30 + 75, legendY);
     drawSymbol("nogood", 30 + 130, legendY + 5);
@@ -248,7 +253,7 @@ export const generateJobReport = async (req, res) => {
           drawTableHeader();
         }
         const num = prefix ? `${prefix}.${idx + 1}` : `${idx + 1}`;
-        const cleanedName = item.name.replace(/™/g, '').trim();
+        const cleanedName = item.name?.replace(/™/g, '').trim() || "Untitled";
         const subItemPrefix = indent > 0 ? "- " : "";
         const indentedDesc = '  '.repeat(indent) + subItemPrefix + `${num}. ${cleanedName}`;
         const statusType = item.status?.toLowerCase();
@@ -260,12 +265,14 @@ export const generateJobReport = async (req, res) => {
       });
     };
 
-    job.checklist.forEach((section, sIdx) => {
-      const roman = romanNumerals[sIdx] || (sIdx + 1);
-      drawRow([`${roman}. ${section.section}`, "", ""], true);
-      const itemTree = buildItemTree(section.items);
-      drawItems(itemTree);
-    });
+    if (job.checklist && Array.isArray(job.checklist)) {
+      job.checklist.forEach((section, sIdx) => {
+        const roman = romanNumerals[sIdx] || (sIdx + 1);
+        drawRow([`${roman}. ${section.section || "Untitled"}`, "", ""], true);
+        const itemTree = buildItemTree(section.items || []);
+        drawItems(itemTree);
+      });
+    }
 
     // ✅ 1. Appearance Checklist
     doc.addPage();
@@ -286,27 +293,40 @@ export const generateJobReport = async (req, res) => {
       { side: 'right', x: gridX[1], y: gridY[1] }
     ];
 
-    // ✅ Track temp files to clean up
-    const tempFiles = [];
-
     for (const pos of positions) {
       const sideMarks = job.appearanceMarks?.filter(mark => mark.side === pos.side) || [];
       const imagePath = await getImagePath(job.appearanceImages?.[pos.side]);
       
       if (imagePath) {
-        tempFiles.push(imagePath); // Track for cleanup
-        doc.image(imagePath, pos.x, pos.y, { width: imageWidth, height: imageHeight });
+        tempFiles.push(imagePath);
+        try {
+          doc.image(imagePath, pos.x, pos.y, { width: imageWidth, height: imageHeight });
+        } catch (imgErr) {
+          console.error("Error loading appearance image:", imgErr.message);
+          doc.rect(pos.x, pos.y, imageWidth, imageHeight).stroke();
+          doc.fontSize(10).text(`No ${pos.side} image`, pos.x + 10, pos.y + imageHeight / 2, { width: imageWidth - 20, align: "center" });
+        }
       } else {
         doc.rect(pos.x, pos.y, imageWidth, imageHeight).stroke();
         doc.fontSize(10).text(`No ${pos.side} image`, pos.x + 10, pos.y + imageHeight / 2, { width: imageWidth - 20, align: "center" });
       }
 
-      sideMarks.forEach((mark, idx) => {
+            // ✅ FIXED: Draw defect marks using PDFKit path method
+      sideMarks.forEach((mark) => {
         const markType = mark.type || 'circle';
-        const clampedX = Math.max(0, Math.min(1, mark.x || 0));
-        const clampedY = Math.max(0, Math.min(1, mark.y || 0));
-        const clampedMarkX = pos.x + (clampedX * imageWidth);
-        const clampedMarkY = pos.y + (clampedY * imageHeight);
+        
+        // Calculate position - for paths, use the first point of the path
+        let clampedMarkX, clampedMarkY;
+        
+        if (markType === 'path' && Array.isArray(mark.path) && mark.path.length > 0) {
+          // For path, use the first point of the path array
+          clampedMarkX = pos.x + ((mark.path[0].x || 0) * imageWidth);
+          clampedMarkY = pos.y + ((mark.path[0].y || 0) * imageHeight);
+        } else {
+          // For circle, use mark.x and mark.y
+          clampedMarkX = pos.x + (Math.max(0, Math.min(1, mark.x || 0)) * imageWidth);
+          clampedMarkY = pos.y + (Math.max(0, Math.min(1, mark.y || 0)) * imageHeight);
+        }
         
         doc.save();
         doc.strokeColor('red').lineWidth(2);
@@ -316,18 +336,19 @@ export const generateJobReport = async (req, res) => {
           const scaledRadius = Math.max(5, radius * Math.min(imageWidth, imageHeight));
           doc.circle(clampedMarkX, clampedMarkY, scaledRadius).stroke();
         } else if (markType === 'path' && Array.isArray(mark.path) && mark.path.length > 1) {
-          doc.beginPath();
+          // ✅ FIXED: Use PDFKit's path() method instead of beginPath
+          let pathString = '';
           mark.path.forEach((point, index) => {
             const px = pos.x + ((point.x || 0) * imageWidth);
             const py = pos.y + ((point.y || 0) * imageHeight);
-            if (index === 0) doc.moveTo(px, py);
-            else doc.lineTo(px, py);
+            pathString += (index === 0 ? `M ${px} ${py}` : ` L ${px} ${py}`);
           });
-          doc.stroke();
+          doc.path(pathString).stroke();
         }
         
         doc.restore();
         
+        // ✅ Text position is now consistent - slightly above the mark
         const textY = clampedMarkY - 20;
         const shortCode = mark.defectName?.split(' ')[0] || "Defect";
         doc.fontSize(8).fillColor('red').text(shortCode, clampedMarkX - 10, textY);
@@ -364,7 +385,7 @@ export const generateJobReport = async (req, res) => {
       }
     });
 
-    // ✅ 2. Summary Checklist
+       // ✅ 2. Summary Checklist
     doc.addPage();
     drawHeader();
     doc.fontSize(14).text("Summary Checklist", { align: "center" });
@@ -440,78 +461,80 @@ export const generateJobReport = async (req, res) => {
     doc.y = summaryY + summaryRowHeight;
 
     // ✅ Use for...of instead of forEach to support await
-for (let idx = 0; idx < (job.defectSummary || []).length; idx++) {
-  const defect = job.defectSummary[idx];
+    if (job.defectSummary && Array.isArray(job.defectSummary)) {
+      for (let idx = 0; idx < job.defectSummary.length; idx++) {
+        const defect = job.defectSummary[idx];
 
-  if (doc.y > 700) {
-    doc.addPage();
-    drawHeader();
-    summaryY = doc.y;
-    summaryHeaders.forEach((h, i) => {
-      doc.text(h, summaryColX[i] + 5, summaryY + 7, { width: summaryColWidths[i] - 10, align: "center" });
-    });
-    doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();
-    doc.moveTo(30, summaryY + summaryRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + summaryRowHeight).stroke();
-    summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + summaryRowHeight).stroke());
-    doc.y = summaryY + summaryRowHeight;
-  }
-  summaryY = doc.y;
+        if (doc.y > 700) {
+          doc.addPage();
+          drawHeader();
+          summaryY = doc.y;
+          summaryHeaders.forEach((h, i) => {
+            doc.text(h, summaryColX[i] + 5, summaryY + 7, { width: summaryColWidths[i] - 10, align: "center" });
+          });
+          doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();
+          doc.moveTo(30, summaryY + summaryRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + summaryRowHeight).stroke();
+          summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + summaryRowHeight).stroke());
+          doc.y = summaryY + summaryRowHeight;
+        }
+        summaryY = doc.y;
 
-  const cells = [
-    defect.no || (idx + 1).toString(),
-    "",
-    defect.defectEncountered || "N/A",
-    "",
-    defect.recurrence?.toString() || "0",
-    ""
-  ];
-  let dynamicRowHeight = summaryRowHeight;
-  doc.font("Helvetica").fontSize(14);
-  cells.forEach((cell, i) => {
-    if (i !== 1 && i !== 3 && i !== 5) {
-      const cellHeight = doc.heightOfString(cell, { width: summaryColWidths[i] - 10 }) + 10;
-      dynamicRowHeight = Math.max(dynamicRowHeight, cellHeight);
+        const cells = [
+          defect.no || (idx + 1).toString(),
+          "",
+          defect.defectEncountered || "N/A",
+          "",
+          defect.recurrence?.toString() || "0",
+          ""
+        ];
+        let dynamicRowHeight = summaryRowHeight;
+        doc.font("Helvetica").fontSize(14);
+        cells.forEach((cell, i) => {
+          if (i !== 1 && i !== 3 && i !== 5) {
+            const cellHeight = doc.heightOfString(cell, { width: summaryColWidths[i] - 10 }) + 10;
+            dynamicRowHeight = Math.max(dynamicRowHeight, cellHeight);
+          }
+        });
+
+        doc.font("Helvetica").fontSize(14);
+        doc.text(cells[0], summaryColX[0] + 5, summaryY + 7, { width: summaryColWidths[0] - 10, align: "center" });
+        if (defect.defectCode) {
+          drawDefectSymbol(defect.defectCode, summaryColX[1] + 10, summaryY + dynamicRowHeight / 2);
+        } else {
+          doc.text("N/A", summaryColX[1] + 5, summaryY + 7, { width: summaryColWidths[1] - 10, align: "center" });
+        }
+        doc.text(cells[2], summaryColX[2] + 5, summaryY + 7, { width: summaryColWidths[2] - 10 });
+        if (defect.status === 'noGood') {
+          drawSymbol('nogood', summaryColX[3] + summaryColWidths[3] / 2, summaryY + dynamicRowHeight / 2);
+        } else if (defect.status === 'corrected') {
+          drawSymbol('corrected', summaryColX[3] + summaryColWidths[3] / 2, summaryY + dynamicRowHeight / 2);
+        } else {
+          doc.text("N/A", summaryColX[3] + 5, summaryY + 7, { width: summaryColWidths[3] - 10, align: "center" });
+        }
+        doc.text(cells[4], summaryColX[4] + 5, summaryY + 7, { width: summaryColWidths[4] - 10, align: "center" });
+
+        // ✅ Download defect image to temp file
+        const defectImagePath = await getImagePath(defect.image);
+        if (defectImagePath) {
+          tempFiles.push(defectImagePath);
+          try {
+            const imageX = summaryColX[5] + (summaryColWidths[5] - 40) / 2;
+            const imageY = summaryY + (dynamicRowHeight - 40) / 2;
+            doc.image(defectImagePath, imageX, imageY, { width: 40, height: 40 });
+          } catch (imgErr) {
+            console.error("Error loading defect image:", imgErr.message);
+            doc.text("Image error", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
+          }
+        } else {
+          doc.text("N/A", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
+        }
+
+        doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();
+        doc.moveTo(30, summaryY + dynamicRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + dynamicRowHeight).stroke();
+        summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + dynamicRowHeight).stroke());
+        doc.y = summaryY + dynamicRowHeight;
+      }
     }
-  });
-
-  doc.font("Helvetica").fontSize(14);
-  doc.text(cells[0], summaryColX[0] + 5, summaryY + 7, { width: summaryColWidths[0] - 10, align: "center" });
-  if (defect.defectCode) {
-    drawDefectSymbol(defect.defectCode, summaryColX[1] + 10, summaryY + dynamicRowHeight / 2);
-  } else {
-    doc.text("N/A", summaryColX[1] + 5, summaryY + 7, { width: summaryColWidths[1] - 10, align: "center" });
-  }
-  doc.text(cells[2], summaryColX[2] + 5, summaryY + 7, { width: summaryColWidths[2] - 10 });
-  if (defect.status === 'noGood') {
-    drawSymbol('nogood', summaryColX[3] + summaryColWidths[3] / 2, summaryY + dynamicRowHeight / 2);
-  } else if (defect.status === 'corrected') {
-    drawSymbol('corrected', summaryColX[3] + summaryColWidths[3] / 2, summaryY + dynamicRowHeight / 2);
-  } else {
-    doc.text("N/A", summaryColX[3] + 5, summaryY + 7, { width: summaryColWidths[3] - 10, align: "center" });
-  }
-  doc.text(cells[4], summaryColX[4] + 5, summaryY + 7, { width: summaryColWidths[4] - 10, align: "center" });
-
-  // ✅ Download defect image to temp file
-  const defectImagePath = await getImagePath(defect.image);
-  if (defectImagePath) {
-    tempFiles.push(defectImagePath); // Track for cleanup
-    try {
-      const imageX = summaryColX[5] + (summaryColWidths[5] - 40) / 2;
-      const imageY = summaryY + (dynamicRowHeight - 40) / 2;
-      doc.image(defectImagePath, imageX, imageY, { width: 40, height: 40 });
-    } catch (imgErr) {
-      console.error("Error loading defect image:", imgErr.message);
-      doc.text("Image error", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
-    }
-  } else {
-    doc.text("N/A", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
-  }
-
-  doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();
-  doc.moveTo(30, summaryY + dynamicRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + dynamicRowHeight).stroke();
-  summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + dynamicRowHeight).stroke());
-  doc.y = summaryY + dynamicRowHeight;
-}
 
     // ✅ 3. Technical Checklist
     doc.addPage();
@@ -628,7 +651,7 @@ for (let idx = 0; idx < (job.defectSummary || []).length; idx++) {
     tableY = drawTable(minHeaders, minRows, maxColWidths, doc.y);
     doc.y = tableY + 10;
 
-    doc.fontSize(12).text("II. Speed Testing", 30, doc.y);
+       doc.fontSize(12).text("II. Speed Testing", 30, doc.y);
     doc.moveDown();
     const speedHeaders = [[{ text: "Speedometer Reading" }, { text: "Speed Tester Reading" }]];
     const speedRows = [[{ text: techData.speedTesting?.speedometer || "", align: "center" }, { text: techData.speedTesting?.tester || "", align: "center" }]];
@@ -677,9 +700,15 @@ for (let idx = 0; idx < (job.defectSummary || []).length; idx++) {
     // ✅ Clean up temp files before ending
     tempFiles.forEach(filePath => cleanupTempFile(filePath));
 
+    // ✅ IMPORTANT: End the PDF properly
     doc.end();
+    
   } catch (error) {
     console.error("Error generating job report:", error);
-    res.status(500).json({ message: error.message });
+    
+    // ✅ FIXED: Only send error response if headers haven't been sent
+    if (!res.headersSent) {
+      res.status(500).json({ message: error.message });
+    }
   }
 };
