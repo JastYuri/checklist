@@ -18,7 +18,8 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
   const [specialStep, setSpecialStep] = useState(0); // 0 = normal, 1 = appearance, 2 = summary, 3 = technical
   const [editedAppearanceData, setEditedAppearanceData] = useState(job.appearanceMarks || []); // ✅ Fixed: Initialize from job.appearanceMarks
   const [editedSummaryData, setEditedSummaryData] = useState(job.defectSummary || []); // ✅ Fixed: Initialize from job.defectSummary
-  const [editedTechnicalData, setEditedTechnicalData] = useState(job.technicalTests || {}); // ✅ Fixed: Initialize from job.technicalTests
+  const [editedTechnicalData, setEditedTechnicalData] = useState(job.technicalTests || {}); 
+  const [validationError, setValidationError] = useState(null);
 
   // ✅ Updated: useEffect to sync with correct backend properties
   useEffect(() => {
@@ -35,13 +36,13 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
   };
 
   const updateStatus = (sectionIdx, itemIdx, status) => {
-    setEditedChecklist(prev => {
-      const updated = [...prev];
-      updated[sectionIdx].items[itemIdx].status = status;
-      if (status === "good" || status === "na") updated[sectionIdx].items[itemIdx].remarks = "";
-      return updated;
-    });
-  };
+  setEditedChecklist(prev => {
+    const updated = [...prev];
+    updated[sectionIdx].items[itemIdx].status = status;
+    // ✅ Keep remarks regardless of status
+    return updated;
+  });
+};
 
   const updateRemarks = (sectionIdx, itemIdx, value) => {
     setEditedChecklist(prev => {
@@ -59,6 +60,38 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
       return updated;
     });
   };
+
+
+  // ✅ ADD THIS useEffect
+useEffect(() => {
+  if (editedChecklist && editedChecklist.length > 0) {
+    validateChecklist();
+  }
+}, [editedChecklist]);
+
+const validateChecklist = () => {
+  let hasError = false;
+  let errorMessage = "";
+
+  editedChecklist.forEach((section, sectionIdx) => {
+    section.items.forEach((item, itemIdx) => {
+      if (item.status === "noGood" && (!item.remarks || item.remarks.trim() === "")) {
+        hasError = true;
+        errorMessage = `Section "${section.section}" - Item "${item.name}" requires remarks for "No Good" status.`;
+      }
+    });
+  });
+
+  if (hasError) {
+    setValidationError(errorMessage);
+    return false;
+  }
+
+  setValidationError(null);
+  return true;
+};
+
+
 
   // ✅ New function to open image preview
   const openImagePreview = (imageUrl) => {
@@ -211,28 +244,20 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
                               </button>
                             </div>
                           </td>
-                          <td className="text-center">
-                            {item.status === "noGood" ? (
-                              <input
-                                type="text"
-                                placeholder="Remarks (required)"
-                                value={item.remarks || ""}
-                                onChange={(e) => updateRemarks(currentSection, originalIdx, e.target.value)}
-                                className="input input-bordered w-full border-red-500"
-                                required
-                              />
-                            ) : item.status === "corrected" ? (
-                              <input
-                                type="text"
-                                placeholder="Remarks (optional)"
-                                value={item.remarks || ""}
-                                onChange={(e) => updateRemarks(currentSection, originalIdx, e.target.value)}
-                                className="input input-bordered w-full"
-                              />
-                            ) : (
-                              <span className="text-gray-400">N/A</span>
-                            )}
-                          </td>
+                           <td className="text-center">
+                      <input
+                        type="text"
+                        placeholder={`Remarks (${item.status === "noGood" ? "required" : "optional"})`}
+                        value={item.remarks || ""}
+                        onChange={(e) => updateRemarks(currentSection, originalIdx, e.target.value)}
+                        className={`input input-bordered w-full ${
+                          item.status === "noGood" && (!item.remarks || item.remarks.trim() === "")
+                            ? "border-red-500 focus:ring-red-500"
+                            : ""
+                        }`}
+                        required={item.status === "noGood"}
+                      />
+                    </td>
                         </tr>
                       );
                     })}
@@ -250,17 +275,31 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
                   Previous
                 </button>
               )}
-              {currentSection < editedChecklist.length - 1 && (
-                <button
-                  className="btn btn-primary w-full md:w-auto ml-auto"
-                  onClick={() => setCurrentSection(currentSection + 1)}
-                >
-                  Next
-                </button>
-              )}
+               {currentSection < editedChecklist.length - 1 && (
+              <button
+                className="btn btn-primary w-full md:w-auto ml-auto"
+                onClick={() => {
+                  if (validateChecklist()) {
+                    setCurrentSection(currentSection + 1);
+                  }
+                }}
+                disabled={validationError !== null}
+              >
+                Next
+              </button>
+            )}
             </div>
+            {/* ✅ ADD THIS ERROR MESSAGE DISPLAY HERE */}
+{validationError && (
+  <div className="alert alert-error text-sm mt-3">
+    <span>{validationError}</span>
+  </div>
+)}
           </div>
+          
         ) : (
+
+          
           // Special Checklists
           <div className="flex-1 overflow-y-auto border p-4 rounded">
             <h4 className="text-lg font-semibold mb-4">

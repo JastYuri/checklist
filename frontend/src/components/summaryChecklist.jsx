@@ -1,32 +1,62 @@
 import React, { useState } from "react";
 
+const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => {
+  const [defects, setDefects] = useState(data || [{ 
+    no: 1, 
+    defectCode: '', 
+    defectEncountered: '', 
+    status: 'noGood', // ✅ Default to 'noGood' for new defects
+    image: null, 
+    recurrence: 0 
+  }]);
+  const [previewImage, setPreviewImage] = useState(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-
-const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // ✅ Added openImagePreview prop for modal integration
-  const [defects, setDefects] = useState(data || [{ no: 1, defectCode: '', defectEncountered: '', status: '', image: null, recurrence: 0 }]);
-  const [previewImage, setPreviewImage] = useState(null); // ✅ Added state for image preview modal
-  const [isPreviewOpen, setIsPreviewOpen] = useState(false); // ✅ Added state for modal visibility
-
+  // ✅ UPDATED: Handle image file validation (20MB, any format)
   const updateDefect = (idx, field, value) => {
+    // ✅ Handle image file validation
+    if (field === 'image' && value) {
+      const file = value;
+      // ✅ Check file size (20MB limit)
+      if (file.size > 20 * 1024 * 1024) {
+        alert("Image size must be less than 20MB.");
+        return;
+      }
+      // ✅ No MIME type restriction - accept all image formats (HEIC, AVIF, etc.)
+    }
+    
     const updated = defects.map((d, i) => i === idx ? { ...d, [field]: value } : d);
     setDefects(updated);
     onChange(updated);
   };
 
   const addDefect = () => {
-    const newDefect = { no: defects.length + 1, defectCode: '', defectEncountered: '', status: '', image: null, recurrence: 0 };
+    const newDefect = { 
+      no: defects.length + 1, 
+      defectCode: '', 
+      defectEncountered: '', 
+      status: 'noGood', // ✅ Default to 'noGood' for new defects
+      image: null, 
+      recurrence: 0 
+    };
     setDefects([...defects, newDefect]);
   };
 
-  const openPreview = (imageSrc) => { // ✅ Added function to open preview modal
+  const openPreview = (imageSrc) => {
     setPreviewImage(imageSrc);
     setIsPreviewOpen(true);
   };
 
-  const closePreview = () => { // ✅ Added function to close preview modal
+  const closePreview = () => {
     setIsPreviewOpen(false);
     setPreviewImage(null);
   };
+
+  // ✅ CORRECTED: Only 2 status options for defect summary
+  const statusOptions = [
+    { value: 'noGood', symbol: '❌', label: 'No Good' },
+    { value: 'corrected', symbol: 'ⓧ', label: 'Corrected' },
+  ];
 
   const defectCodeOptions = [
     { value: 'functional_safety', symbol: '■XX', label: 'FUNCTIONAL DEFECT/DEFECT RELATED TO SAFETY/DEFECT NOT SATISFYING THE DRAWING/DEFECT RELATED TO REGULATIONS' },
@@ -35,18 +65,13 @@ const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // 
     { value: 'sensory_minor', symbol: '□X', label: 'SENSORY/APPEARANCE DEFECT EVALUATION - MINOR' },
   ];
 
-  const statusOptions = [
-    { value: 'noGood', symbol: '❌', label: 'No Good' }, // ✅ Matches backend enum
-    { value: 'corrected', symbol: 'ⓧ', label: 'Corrected' },
-  ];
-
   return (
-    <div className="card bg-base-200 shadow-md p-4 md:p-6"> {/* ✅ Responsive: Adaptive padding */}
+    <div className="card bg-base-200 shadow-md p-4 md:p-6">
       <h4 className="text-lg font-semibold mb-4 text-info">Summary Checklist</h4>
       
       {/* Legends Section */}
       <div className="mb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4"> {/* ✅ Responsive: Single column on small screens, two on large */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {/* Defect Code Legend */}
           <div className="bg-base-100 p-4 rounded-lg shadow-sm">
             <h5 className="text-md font-semibold mb-3 text-primary">Defect Code Legend</h5>
@@ -76,8 +101,8 @@ const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // 
       </div>
       
       {/* Table */}
-      <div className="overflow-x-auto"> {/* ✅ Responsive: Horizontal scroll for table on small screens */}
-        <table className="table w-full border min-w-200"> {/* ✅ Responsive: Min width for table */}
+      <div className="overflow-x-auto">
+        <table className="table w-full border min-w-200">
           <thead>
             <tr>
               <th className="text-center">No.</th>
@@ -93,7 +118,7 @@ const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // 
               <tr key={idx}>
                 <td className="text-center">{defect.no}</td>
                 <td className="text-center">
-                  <div className="flex gap-2 flex-wrap justify-center"> {/* ✅ Responsive: Wrap buttons, center */}
+                  <div className="flex gap-2 flex-wrap justify-center">
                     {defectCodeOptions.map((option) => (
                       <label key={option.value} className="cursor-pointer">
                         <input
@@ -121,7 +146,7 @@ const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // 
                   />
                 </td>
                 <td className="text-center">
-                  <div className="flex gap-2 justify-center"> {/* ✅ Responsive: Center buttons */}
+                  <div className="flex gap-2 justify-center">
                     {statusOptions.map((option) => (
                       <label key={option.value} className="cursor-pointer">
                         <input
@@ -142,7 +167,7 @@ const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // 
                 <td className="text-center">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*" // ✅ Changed to accept all images
                     onChange={(e) => updateDefect(idx, 'image', e.target.files[0])}
                     className="file-input file-input-bordered file-input-primary w-full mb-2"
                   />
@@ -153,20 +178,22 @@ const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // 
                         src={URL.createObjectURL(defect.image)}
                         alt="Defect"
                         className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform mx-auto"
-                        onClick={() => openPreview(URL.createObjectURL(defect.image))} // ✅ Opens preview modal
+                        onClick={() => openPreview(URL.createObjectURL(defect.image))}
                       />
                     ) : (
                       // For existing images (e.g., from backend)
-                     <img
-  src={defect.image}
-  alt="Defect"
-  className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform mx-auto"
-  onClick={() => openPreview(defect.image)} // ✅ Opens preview modal
-/>
+                      <img
+                        src={defect.image}
+                        alt="Defect"
+                        className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform mx-auto"
+                        onClick={() => openPreview(defect.image)}
+                      />
                     )
                   ) : (
                     <span className="text-gray-400 text-sm">No Image</span>
                   )}
+                  {/* ✅ Added helper text below the input */}
+                  <p className="text-xs text-gray-500 mt-1">Max 20MB, Any Image Format.</p>
                 </td>
                 <td className="text-center">
                   <input
@@ -188,7 +215,11 @@ const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // 
         <div className="modal modal-open">
           <div className="modal-box max-w-4xl">
             <h3 className="font-bold text-lg mb-4">Image Preview</h3>
-            <img src={previewImage} alt="Preview" className="w-full h-auto max-h-96 object-contain" />
+            <img 
+              src={previewImage} 
+              alt="Preview" 
+              className="w-full h-auto max-h-96 object-contain rounded-lg" 
+            />
             <div className="modal-action">
               <button className="btn" onClick={closePreview}>Close</button>
             </div>
@@ -197,9 +228,9 @@ const SummaryChecklist = ({ data, onChange, onSave, openImagePreview }) => { // 
       )}
       
       {/* Buttons */}
-      <div className="mt-4 flex flex-col md:flex-row gap-2 justify-end"> {/* ✅ Responsive: Stack vertically on mobile, right-align */}
-        <button className="btn btn-primary w-full md:w-auto" onClick={addDefect}>Add Defect</button> {/* ✅ Responsive: Full width on mobile */}
-        <button className="btn btn-success w-full md:w-auto" onClick={() => onSave(defects)}>Save Summary Checklist</button> {/* ✅ Responsive: Full width on mobile */}
+      <div className="mt-4 flex flex-col md:flex-row gap-2 justify-end">
+        <button className="btn btn-primary w-full md:w-auto" onClick={addDefect}>Add Defect</button>
+        <button className="btn btn-success w-full md:w-auto" onClick={() => onSave(defects)}>Save Summary Checklist</button>
       </div>
     </div>
   );

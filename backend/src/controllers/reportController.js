@@ -385,317 +385,428 @@ export const generateJobReport = async (req, res) => {
       }
     });
 
-       // ✅ 2. Summary Checklist
-    doc.addPage();
-    drawHeader();
-    doc.fontSize(14).text("Summary Checklist", { align: "center" });
-    doc.moveDown();
+   
 
-    const drawDefectSymbol = (input, x, y) => {
-      const defectCodeOptions = [
-        { value: 'functional_safety', symbol: '■XX' },
-        { value: 'functional_other', symbol: '■X' },
-        { value: 'sensory_major', symbol: '□XX' },
-        { value: 'sensory_minor', symbol: '□X' }
-      ];
-      let option = defectCodeOptions.find(opt => opt.value === input);
-      if (!option) {
-        option = defectCodeOptions.find(opt => opt.symbol.replace(/■|□/, '') === input);
-      }
-      if (!option) return;
-      doc.save();
-      if (option.symbol.includes('■')) {
-        doc.rect(x, y - 6, 12, 12).fillAndStroke();
-        doc.fillColor('black').fontSize(8).text(option.symbol.replace('■', ''), x + 15, y - 4);
-      } else if (option.symbol.includes('□')) {
-        doc.rect(x, y - 6, 12, 12).stroke();
-        doc.fillColor('black').fontSize(8).text(option.symbol.replace('□', ''), x + 15, y - 4);
-      }
-      doc.restore();
-    };
+      // ✅ 2. Summary Checklist
+doc.addPage();
+drawHeader();
+doc.fontSize(14).text("Summary Checklist", { align: "center" });
+doc.moveDown();
 
-    const summaryLegendX = 30;
-    const statusLegendX = 450;
-    const summaryLegendY = doc.y;
-    doc.fontSize(10).text("Defect Code Legend:", summaryLegendX, summaryLegendY);
-    const defectCodeOptions = [
-      { value: 'functional_safety', symbol: '■XX', label: 'FUNCTIONAL DEFECT/DEFECT RELATED TO SAFETY/DEFECT NOT SATISFYING THE DRAWING/DEFECT RELATED TO REGULATIONS' },
-      { value: 'functional_other', symbol: '■X', label: 'FUNCTIONAL DEFECT DOES NOT MENTIONED ABOVE' },
-      { value: 'sensory_major', symbol: '□XX', label: 'SENSORY/APPEARANCE DEFECT EVALUATION - MAJOR' },
-      { value: 'sensory_minor', symbol: '□X', label: 'SENSORY/APPEARANCE DEFECT EVALUATION - MINOR' }
-    ];
-    defectCodeOptions.forEach((option, idx) => {
-      drawDefectSymbol(option.value, summaryLegendX + 10, summaryLegendY + 15 + idx * 20 + 6);
-      doc.fontSize(8).text(` - ${option.label}`, summaryLegendX + 50, summaryLegendY + 15 + idx * 20, { width: 350, align: 'left' });
-    });
+// ✅ ADD THIS: Job Info Table for Summary Page
+const drawSummaryJobInfoTable = () => {
+  const leftX = 30;
+  const rightX = 300;
+  const tableWidth = 240;
+  const rowHeight = 20;
+  const startY = doc.y;
 
-    doc.fontSize(10).text("Status Legend:", statusLegendX, summaryLegendY);
-    const statusOptions = [
-      { value: 'noGood', label: 'No Good' },
-      { value: 'corrected', label: 'Corrected' }
-    ];
-    statusOptions.forEach((option, idx) => {
-      drawSymbol(option.value, statusLegendX + 10, summaryLegendY + 15 + idx * 20 + 6);
-      doc.fontSize(8).text(` - ${option.label}`, statusLegendX + 30, summaryLegendY + 15 + idx * 20);
-    });
+  const leftData = [
+    `Customer: ${job.jobInfo?.customer || "N/A"}`,
+    `Chassis No.: ${job.jobInfo?.chassisNum || "N/A"}`,
+    `Body Type: ${job.jobInfo?.bodyType || "N/A"}`
+  ];
 
-    const maxLegendHeight = 15 + (defectCodeOptions.length - 1) * 20 + 20;
-    doc.y = summaryLegendY + maxLegendHeight + 10;
+  const rightData = [
+    `Date: ${new Date(job.jobInfo?.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}`,
+    `JO No.: ${job.jobInfo?.joNo || "N/A"}`,
+    `Job Type: ${job.jobInfo?.jobType || "N/A"}`
+  ];
 
-    const summaryColWidths = [50, 100, 150, 80, 80, 100];
-    const summaryColX = [30];
-    for (let i = 0; i < summaryColWidths.length; i++) {
-      summaryColX[i + 1] = summaryColX[i] + summaryColWidths[i];
+  doc.font("Helvetica").fontSize(10);
+  
+  leftData.forEach((text, idx) => {
+    let y = startY + idx * rowHeight;
+    // ✅ FIXED: Remove align: "center" from job info table
+    doc.text(text, leftX + 5, y + 5, { width: tableWidth - 10 });
+    doc.rect(leftX, y, tableWidth, rowHeight).stroke();
+  });
+
+  rightData.forEach((text, idx) => {
+    let y = startY + idx * rowHeight;
+    // ✅ FIXED: Remove align: "center" from job info table
+    doc.text(text, rightX + 5, y + 5, { width: tableWidth - 10 });
+    doc.rect(rightX, y, tableWidth, rowHeight).stroke();
+  });
+
+  doc.y = startY + leftData.length * rowHeight + 10;
+};
+
+drawSummaryJobInfoTable();
+
+// ✅ FIXED: Updated drawDefectSymbol to show full symbol in legend
+const drawDefectSymbol = (input, x, y) => {
+  const defectCodeOptions = [
+    { value: 'functional_safety', symbol: '■XX' },
+    { value: 'functional_other', symbol: '■X' },
+    { value: 'sensory_major', symbol: '□XX' },
+    { value: 'sensory_minor', symbol: '□X' }
+  ];
+  let option = defectCodeOptions.find(opt => opt.value === input);
+  if (!option) {
+    option = defectCodeOptions.find(opt => opt.symbol.replace(/■|□/, '') === input);
+  }
+  if (!option) return;
+  
+  doc.save();
+  const boxSize = 12;
+  const textX = x + boxSize + 5;
+  
+  if (option.symbol.includes('■')) {
+    doc.rect(x, y - 6, boxSize, boxSize).fillAndStroke();
+    doc.fillColor('black').fontSize(8).text(option.symbol.replace('■', ''), textX, y - 4);
+  } else if (option.symbol.includes('□')) {
+    doc.rect(x, y - 6, boxSize, boxSize).stroke();
+    doc.fillColor('black').fontSize(8).text(option.symbol.replace('□', ''), textX, y - 4);
+  }
+  doc.restore();
+};
+
+// ✅ FIXED: Add drawStatusSymbol function for status legend
+const drawStatusSymbol = (type, x, y) => {
+  doc.save();
+  switch (type) {
+    case 'noGood':
+      doc.lineWidth(1);
+      doc.path(`M ${x - 6} ${y - 6} L ${x + 6} ${y + 6} M ${x + 6} ${y - 6} L ${x - 6} ${y + 6}`).stroke();
+      break;
+    case 'corrected':
+      doc.circle(x, y, 6).stroke();
+      doc.path(`M ${x - 4} ${y - 4} L ${x + 4} ${y + 4} M ${x + 4} ${y - 4} L ${x - 4} ${y + 4}`).stroke();
+      break;
+  }
+  doc.restore();
+};
+
+const summaryLegendX = 30;
+const statusLegendX = 450;
+const summaryLegendY = doc.y;
+
+doc.y = doc.y + 10;
+doc.fontSize(10).text("Defect Code Legend:", summaryLegendX, summaryLegendY);
+const defectCodeOptions = [
+  { value: 'functional_safety', symbol: '■XX', label: 'FUNCTIONAL DEFECT/DEFECT RELATED TO SAFETY/DEFECT NOT SATISFYING THE DRAWING/DEFECT RELATED TO REGULATIONS' },
+  { value: 'functional_other', symbol: '■X', label: 'FUNCTIONAL DEFECT DOES NOT MENTIONED ABOVE' },
+  { value: 'sensory_major', symbol: '□XX', label: 'SENSORY/APPEARANCE DEFECT EVALUATION - MAJOR' },
+  { value: 'sensory_minor', symbol: '□X', label: 'SENSORY/APPEARANCE DEFECT EVALUATION - MINOR' }
+];
+defectCodeOptions.forEach((option, idx) => {
+  drawDefectSymbol(option.value, summaryLegendX + 10, summaryLegendY + 15 + idx * 20 + 6);
+  doc.fontSize(8).text(` - ${option.label}`, summaryLegendX + 50, summaryLegendY + 15 + idx * 20, { width: 350, align: 'left' });
+});
+
+// ✅ FIXED: Use drawStatusSymbol for status legend
+doc.fontSize(10).text("Status Legend:", statusLegendX, summaryLegendY);
+const statusOptions = [
+  { value: 'noGood', label: 'No Good' },
+  { value: 'corrected', label: 'Corrected' }
+];
+statusOptions.forEach((option, idx) => {
+  // ✅ FIXED: Use drawStatusSymbol instead of drawSymbol
+  drawStatusSymbol(option.value, statusLegendX + 10, summaryLegendY + 15 + idx * 20 + 6);
+  doc.fontSize(8).text(` - ${option.label}`, statusLegendX + 30, summaryLegendY + 15 + idx * 20);
+});
+
+const maxLegendHeight = 15 + (defectCodeOptions.length - 1) * 20 + 20;
+doc.y = summaryLegendY + maxLegendHeight + 10;
+
+const summaryColWidths = [50, 100, 150, 80, 80, 100];
+const summaryColX = [30];
+for (let i = 0; i < summaryColWidths.length; i++) {
+  summaryColX[i + 1] = summaryColX[i] + summaryColWidths[i];
+}
+const summaryRowHeight = 50;
+
+let summaryY = doc.y;
+doc.font("Helvetica-Bold").fontSize(10);
+const summaryHeaders = ["No.", "Defect Code", "Defect Encountered", "Status", "Recurrence", "Image"];
+summaryHeaders.forEach((h, i) => {
+  doc.text(h, summaryColX[i] + 5, summaryY + 7, { width: summaryColWidths[i] - 10, align: "center" });
+});
+doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();
+doc.moveTo(30, summaryY + summaryRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + summaryRowHeight).stroke();
+summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + summaryRowHeight).stroke());
+doc.y = summaryY + summaryRowHeight;
+
+// ✅ Use for...of instead of forEach to support await
+if (job.defectSummary && Array.isArray(job.defectSummary)) {
+  for (let idx = 0; idx < job.defectSummary.length; idx++) {
+    const defect = job.defectSummary[idx];
+
+    if (doc.y > 700) {
+      doc.addPage();
+      drawHeader();
+      summaryY = doc.y;
+      summaryHeaders.forEach((h, i) => {
+        doc.text(h, summaryColX[i] + 5, summaryY + 7, { width: summaryColWidths[i] - 10, align: "center" });
+      });
+      doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();
+      doc.moveTo(30, summaryY + summaryRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + summaryRowHeight).stroke();
+      summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + summaryRowHeight).stroke());
+      doc.y = summaryY + summaryRowHeight;
     }
-    const summaryRowHeight = 50;
+    summaryY = doc.y;
 
-    let summaryY = doc.y;
-    doc.font("Helvetica-Bold").fontSize(10);
-    const summaryHeaders = ["No.", "Defect Code", "Defect Encountered", "Status", "Recurrence", "Image"];
-    summaryHeaders.forEach((h, i) => {
-      doc.text(h, summaryColX[i] + 5, summaryY + 7, { width: summaryColWidths[i] - 10, align: "center" });
+    const cells = [
+      defect.no || (idx + 1).toString(),
+      "",
+      defect.defectEncountered || "N/A",
+      "",
+      defect.recurrence?.toString() || "0",
+      ""
+    ];
+    let dynamicRowHeight = summaryRowHeight;
+    doc.font("Helvetica").fontSize(12); // ✅ Consistent font size
+    cells.forEach((cell, i) => {
+      if (i !== 1 && i !== 3 && i !== 5) {
+        const cellHeight = doc.heightOfString(cell, { width: summaryColWidths[i] - 10 }) + 10;
+        dynamicRowHeight = Math.max(dynamicRowHeight, cellHeight);
+      }
     });
+
+    // ✅ Column 0: No. (Centered, fontSize 12)
+    doc.font("Helvetica").fontSize(12);
+    doc.text(cells[0], summaryColX[0] + 5, summaryY + 7, { width: summaryColWidths[0] - 10, align: "center" });
+    
+    // ✅ Column 1: Defect Code (Symbol + Text Centered)
+    if (defect.defectCode) {
+      drawDefectSymbol(defect.defectCode, summaryColX[1] + 10, summaryY + dynamicRowHeight / 2);
+    } else {
+      doc.text("N/A", summaryColX[1] + 5, summaryY + 7, { width: summaryColWidths[1] - 10, align: "center" });
+    }
+    
+    // ✅ Column 2: Defect Encountered (Centered, fontSize 12)
+    doc.font("Helvetica").fontSize(12);
+    doc.text(cells[2], summaryColX[2] + 5, summaryY + 7, { width: summaryColWidths[2] - 10, align: "center" });
+    
+    // ✅ Column 3: Status (Symbol Centered)
+    if (defect.status === 'noGood') {
+      drawStatusSymbol('noGood', summaryColX[3] + summaryColWidths[3] / 2, summaryY + dynamicRowHeight / 2);
+    } else if (defect.status === 'corrected') {
+      drawStatusSymbol('corrected', summaryColX[3] + summaryColWidths[3] / 2, summaryY + dynamicRowHeight / 2);
+    } else {
+      doc.text("N/A", summaryColX[3] + 5, summaryY + 7, { width: summaryColWidths[3] - 10, align: "center" });
+    }
+    
+    // ✅ Column 4: Recurrence (Centered, fontSize 12)
+    doc.font("Helvetica").fontSize(12);
+    doc.text(cells[4], summaryColX[4] + 5, summaryY + 7, { width: summaryColWidths[4] - 10, align: "center" });
+
+    // ✅ Column 5: Image (Centered)
+    const defectImagePath = await getImagePath(defect.image);
+    if (defectImagePath) {
+      tempFiles.push(defectImagePath);
+      try {
+        const imageX = summaryColX[5] + (summaryColWidths[5] - 40) / 2;
+        const imageY = summaryY + (dynamicRowHeight - 40) / 2;
+        doc.image(defectImagePath, imageX, imageY, { width: 40, height: 40 });
+      } catch (imgErr) {
+        console.error("Error loading defect image:", imgErr.message);
+        doc.text("Image error", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
+      }
+    } else {
+      doc.text("N/A", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
+    }
+
     doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();
-    doc.moveTo(30, summaryY + summaryRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + summaryRowHeight).stroke();
-    summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + summaryRowHeight).stroke());
-    doc.y = summaryY + summaryRowHeight;
+    doc.moveTo(30, summaryY + dynamicRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + dynamicRowHeight).stroke();
+    summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + dynamicRowHeight).stroke());
+    doc.y = summaryY + dynamicRowHeight;
+  }
+}
 
-    // ✅ Use for...of instead of forEach to support await
-    if (job.defectSummary && Array.isArray(job.defectSummary)) {
-      for (let idx = 0; idx < job.defectSummary.length; idx++) {
-        const defect = job.defectSummary[idx];
-
-        if (doc.y > 700) {
-          doc.addPage();
-          drawHeader();
-          summaryY = doc.y;
-          summaryHeaders.forEach((h, i) => {
-            doc.text(h, summaryColX[i] + 5, summaryY + 7, { width: summaryColWidths[i] - 10, align: "center" });
-          });
-          doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();
-          doc.moveTo(30, summaryY + summaryRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + summaryRowHeight).stroke();
-          summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + summaryRowHeight).stroke());
-          doc.y = summaryY + summaryRowHeight;
-        }
-        summaryY = doc.y;
-
-        const cells = [
-          defect.no || (idx + 1).toString(),
-          "",
-          defect.defectEncountered || "N/A",
-          "",
-          defect.recurrence?.toString() || "0",
-          ""
-        ];
-        let dynamicRowHeight = summaryRowHeight;
-        doc.font("Helvetica").fontSize(14);
-        cells.forEach((cell, i) => {
-          if (i !== 1 && i !== 3 && i !== 5) {
-            const cellHeight = doc.heightOfString(cell, { width: summaryColWidths[i] - 10 }) + 10;
-            dynamicRowHeight = Math.max(dynamicRowHeight, cellHeight);
-          }
-        });
-
-        doc.font("Helvetica").fontSize(14);
-        doc.text(cells[0], summaryColX[0] + 5, summaryY + 7, { width: summaryColWidths[0] - 10, align: "center" });
-        if (defect.defectCode) {
-          drawDefectSymbol(defect.defectCode, summaryColX[1] + 10, summaryY + dynamicRowHeight / 2);
-        } else {
-          doc.text("N/A", summaryColX[1] + 5, summaryY + 7, { width: summaryColWidths[1] - 10, align: "center" });
-        }
-        doc.text(cells[2], summaryColX[2] + 5, summaryY + 7, { width: summaryColWidths[2] - 10 });
-        if (defect.status === 'noGood') {
-          drawSymbol('nogood', summaryColX[3] + summaryColWidths[3] / 2, summaryY + dynamicRowHeight / 2);
-        } else if (defect.status === 'corrected') {
-          drawSymbol('corrected', summaryColX[3] + summaryColWidths[3] / 2, summaryY + dynamicRowHeight / 2);
-        } else {
-          doc.text("N/A", summaryColX[3] + 5, summaryY + 7, { width: summaryColWidths[3] - 10, align: "center" });
-        }
-        doc.text(cells[4], summaryColX[4] + 5, summaryY + 7, { width: summaryColWidths[4] - 10, align: "center" });
-
-        // ✅ Download defect image to temp file
-        const defectImagePath = await getImagePath(defect.image);
-        if (defectImagePath) {
-          tempFiles.push(defectImagePath);
-          try {
-            const imageX = summaryColX[5] + (summaryColWidths[5] - 40) / 2;
-            const imageY = summaryY + (dynamicRowHeight - 40) / 2;
-            doc.image(defectImagePath, imageX, imageY, { width: 40, height: 40 });
-          } catch (imgErr) {
-            console.error("Error loading defect image:", imgErr.message);
-            doc.text("Image error", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
-          }
-        } else {
-          doc.text("N/A", summaryColX[5] + 5, summaryY + 7, { width: summaryColWidths[5] - 10, align: "center" });
-        }
-
-        doc.moveTo(30, summaryY).lineTo(summaryColX[summaryColX.length - 1], summaryY).stroke();
-        doc.moveTo(30, summaryY + dynamicRowHeight).lineTo(summaryColX[summaryColX.length - 1], summaryY + dynamicRowHeight).stroke();
-        summaryColX.forEach(x => doc.moveTo(x, summaryY).lineTo(x, summaryY + dynamicRowHeight).stroke());
-        doc.y = summaryY + dynamicRowHeight;
-      }
-    }
+ // ✅ Add Signature Lines below Summary Table
+    doc.moveDown(3);
+    doc.fontSize(10).text("Inspected by: ____________", 30, doc.y);
+    doc.moveDown(1.5);
+    doc.text("Recieve by: ____________", 30, doc.y);
+    doc.moveDown(1);
 
     // ✅ 3. Technical Checklist
-    doc.addPage();
-    drawHeader();
-    doc.fontSize(14).text("Technical Checklist", { align: "center" });
-    doc.moveDown();
+doc.addPage();
+drawHeader();
+doc.fontSize(14).text("Technical Checklist", { align: "center" });
+doc.moveDown();
 
-    const calculateTextHeight = (text, width, fontSize = 10) => {
-      doc.fontSize(fontSize);
-      return doc.heightOfString(text, { width }) + 10;
-    };
+const calculateTextHeight = (text, width, fontSize = 10) => {
+  doc.fontSize(fontSize);
+  return doc.heightOfString(text, { width }) + 10;
+};
 
-    const drawTable = (headers, rows, colWidths, startY, headerFontSize = 10) => {
-      const colX = [30];
-      for (let i = 0; i < colWidths.length; i++) {
-        colX[i + 1] = colX[i] + colWidths[i];
+// ✅ CENTERED + LEFT OFFSET: drawTable function
+const drawTable = (headers, rows, colWidths, startY, headerFontSize = 10) => {
+  const colX = [20]; // ✅ Changed from 30 to 20 (left margin)
+  for (let i = 0; i < colWidths.length; i++) {
+    colX[i + 1] = colX[i] + colWidths[i];
+  }
+  const tableWidth = colX[colX.length - 1] - 20;
+  const pageWidth = doc.page.width;
+  const centerX = (pageWidth - tableWidth) / 2 - 15; // ✅ -15 moves table left
+  
+  let currentY = startY;
+  const spannedColumns = new Set();
+
+  headers.forEach(headerRow => {
+    let headerHeight = 15;
+    headerRow.forEach((h, i) => {
+      const span = h.span || 1;
+      const startCol = headerRow.slice(0, i).reduce((acc, prev) => acc + (prev.span || 1), 0);
+      const endCol = startCol + span - 1;
+      const spanWidth = colX[endCol + 1] - colX[startCol];
+      const cellHeight = calculateTextHeight(h.text, spanWidth - 10, headerFontSize);
+      headerHeight = Math.max(headerHeight, cellHeight);
+    });
+
+    let colIndex = 0;
+    headerRow.forEach((h) => {
+      const startCol = colIndex;
+      const span = h.span || 1;
+      const endCol = colIndex + span - 1;
+      const spanWidth = colX[endCol + 1] - colX[startCol];
+      
+      // ✅ CENTERED + LEFT OFFSET: Adjust x-coordinates
+      doc.font("Helvetica-Bold").fontSize(headerFontSize);
+      doc.text(h.text, centerX + colX[startCol] + 5, currentY + 5, { 
+        width: spanWidth - 10, 
+        align: "center" 
+      });
+      doc.moveTo(centerX + colX[startCol], currentY).lineTo(centerX + colX[startCol] + spanWidth, currentY).stroke();
+      doc.moveTo(centerX + colX[startCol], currentY + headerHeight).lineTo(centerX + colX[startCol] + spanWidth, currentY + headerHeight).stroke();
+      doc.moveTo(centerX + colX[startCol], currentY).lineTo(centerX + colX[startCol], currentY + headerHeight).stroke();
+      doc.moveTo(centerX + colX[startCol] + spanWidth, currentY).lineTo(centerX + colX[startCol] + spanWidth, currentY + headerHeight).stroke();
+      for (let j = 1; j < span; j++) {
+        spannedColumns.add(startCol + j);
       }
-      let currentY = startY;
-      const spannedColumns = new Set();
+      colIndex += span;
+    });
 
-      headers.forEach(headerRow => {
-        let headerHeight = 15;
-        headerRow.forEach((h, i) => {
-          const span = h.span || 1;
-          const startCol = headerRow.slice(0, i).reduce((acc, prev) => acc + (prev.span || 1), 0);
-          const endCol = startCol + span - 1;
-          const spanWidth = colX[endCol + 1] - colX[startCol];
-          const cellHeight = calculateTextHeight(h.text, spanWidth - 10, headerFontSize);
-          headerHeight = Math.max(headerHeight, cellHeight);
-        });
+    colX.forEach((x, idx) => {
+      if (!spannedColumns.has(idx)) {
+        doc.moveTo(centerX + x, currentY).lineTo(centerX + x, currentY + headerHeight).stroke();
+      }
+    });
 
-        let colIndex = 0;
-        headerRow.forEach((h) => {
-          const startCol = colIndex;
-          const span = h.span || 1;
-          const endCol = colIndex + span - 1;
-          const spanWidth = colX[endCol + 1] - colX[startCol];
-          doc.font("Helvetica-Bold").fontSize(headerFontSize);
-          doc.text(h.text, colX[startCol] + 5, currentY + 5, { width: spanWidth - 10, align: "center" });
-          doc.moveTo(colX[startCol], currentY).lineTo(colX[startCol] + spanWidth, currentY).stroke();
-          doc.moveTo(colX[startCol], currentY + headerHeight).lineTo(colX[startCol] + spanWidth, currentY + headerHeight).stroke();
-          doc.moveTo(colX[startCol], currentY).lineTo(colX[startCol], currentY + headerHeight).stroke();
-          doc.moveTo(colX[startCol] + spanWidth, currentY).lineTo(colX[startCol] + spanWidth, currentY + headerHeight).stroke();
-          for (let j = 1; j < span; j++) {
-            spannedColumns.add(startCol + j);
-          }
-          colIndex += span;
-        });
+    currentY += headerHeight;
+  });
 
-        colX.forEach((x, idx) => {
-          if (!spannedColumns.has(idx)) {
-            doc.moveTo(x, currentY).lineTo(x, currentY + headerHeight).stroke();
-          }
-        });
+  rows.forEach(row => {
+    let rowHeight = 20;
+    const cellHeights = row.map((cell, i) => calculateTextHeight(cell.text || "", colWidths[i] - 10));
+    rowHeight = Math.max(rowHeight, ...cellHeights);
 
-        currentY += headerHeight;
+    if (currentY + rowHeight > 700) {
+      doc.addPage();
+      drawHeader();
+      currentY = doc.y;
+    }
+
+    doc.font("Helvetica").fontSize(10);
+    row.forEach((cell, i) => {
+      const cellHeight = cellHeights[i];
+      const textY = currentY + (rowHeight - cellHeight) / 2 + 5;
+      // ✅ CENTERED + LEFT OFFSET: Adjust x-coordinates
+      doc.text(cell.text || "", centerX + colX[i] + 5, textY, { 
+        width: colWidths[i] - 10, 
+        align: "center" 
       });
+    });
 
-      rows.forEach(row => {
-        let rowHeight = 20;
-        const cellHeights = row.map((cell, i) => calculateTextHeight(cell.text || "", colWidths[i] - 10));
-        rowHeight = Math.max(rowHeight, ...cellHeights);
+    // ✅ CENTERED + LEFT OFFSET: Adjust border coordinates
+    doc.moveTo(centerX + 20, currentY).lineTo(centerX + 20 + tableWidth, currentY).stroke();
+    doc.moveTo(centerX + 20, currentY + rowHeight).lineTo(centerX + 20 + tableWidth, currentY + rowHeight).stroke();
+    colX.forEach((x, idx) => {
+      if (!spannedColumns.has(idx)) {
+        doc.moveTo(centerX + x, currentY).lineTo(centerX + x, currentY + rowHeight).stroke();
+      }
+    });
+    currentY += rowHeight;
+  });
 
-        if (currentY + rowHeight > 700) {
-          doc.addPage();
-          drawHeader();
-          currentY = doc.y;
-        }
+  return currentY;
+};
 
-        doc.font("Helvetica").fontSize(10);
-        row.forEach((cell, i) => {
-          const cellHeight = cellHeights[i];
-          const textY = currentY + (rowHeight - cellHeight) / 2 + 5;
-          doc.text(cell.text || "", colX[i] + 5, textY, { width: colWidths[i] - 10, align: cell.align || "left" });
-        });
+const techData = job.technicalTests || {};
 
-        doc.moveTo(30, currentY).lineTo(colX[colX.length - 1], currentY).stroke();
-        doc.moveTo(30, currentY + rowHeight).lineTo(colX[colX.length - 1], currentY + rowHeight).stroke();
-        colX.forEach((x, idx) => {
-          if (!spannedColumns.has(idx)) {
-            doc.moveTo(x, currentY).lineTo(x, currentY + rowHeight).stroke();
-          }
-        });
-        currentY += rowHeight;
-      });
+// ✅ Section I - Breaking Force
+doc.fontSize(12).font("Helvetica-Bold").text("I. Breaking Force Testing (daN)", 30, doc.y);
+doc.moveDown();
 
-      return currentY;
-    };
+let tableY = doc.y;
+const maxHeaders = [[{ text: "Maximum Breaking Force", span: 4 }]];
+const maxRows = [
+  [{ text: "Front (Left Hand)", align: "center" }, { text: "Front (Right Hand)", align: "center" }, { text: "Sum", align: "center" }, { text: "Difference", align: "center" }],
+  [{ text: techData.breakingForce?.max?.front?.left || "N/A", align: "center" }, { text: techData.breakingForce?.max?.front?.right || "N/A", align: "center" }, { text: techData.breakingForce?.max?.front?.sum || "N/A", align: "center" }, { text: techData.breakingForce?.max?.front?.difference || "N/A", align: "center" }],
+  [{ text: "Rear (Left Hand)", align: "center" }, { text: "Rear (Right Hand)", align: "center" }, { text: "Sum", align: "center" }, { text: "Difference", align: "center" }],
+  [{ text: techData.breakingForce?.max?.rear?.left || "N/A", align: "center" }, { text: techData.breakingForce?.max?.rear?.right || "N/A", align: "center" }, { text: techData.breakingForce?.max?.rear?.sum || "N/A", align: "center" }, { text: techData.breakingForce?.max?.rear?.difference || "N/A", align: "center" }]
+];
+const maxColWidths = [100, 100, 100, 100];
+tableY = drawTable(maxHeaders, maxRows, maxColWidths, tableY);
+doc.y = tableY + 10;
 
-    const techData = job.technicalTests || {};
+// ✅ Section II - Minimum Breaking Force
+doc.fontSize(12).font("Helvetica-Bold").text("II. Minimum Breaking Force (daN)", 30, doc.y);
+doc.moveDown();
 
-    doc.fontSize(12).text("I. Break Testing (Breaking Force daN)", 30, doc.y);
-    doc.moveDown();
+const minHeaders = [[{ text: "Minimum Breaking Force", span: 4 }]];
+const minRows = [
+  [{ text: "Front (Left Hand)", align: "center" }, { text: "Front (Right Hand)", align: "center" }, { text: "Sum", align: "center" }, { text: "Difference", align: "center" }],
+  [{ text: techData.breakingForce?.min?.front?.left || "N/A", align: "center" }, { text: techData.breakingForce?.min?.front?.right || "N/A", align: "center" }, { text: techData.breakingForce?.min?.front?.sum || "N/A", align: "center" }, { text: techData.breakingForce?.min?.front?.difference || "N/A", align: "center" }],
+  [{ text: "Rear (Left Hand)", align: "center" }, { text: "Rear (Right Hand)", align: "center" }, { text: "Sum", align: "center" }, { text: "Difference", align: "center" }],
+  [{ text: techData.breakingForce?.min?.rear?.left || "N/A", align: "center" }, { text: techData.breakingForce?.min?.rear?.right || "N/A", align: "center" }, { text: techData.breakingForce?.min?.rear?.sum || "N/A", align: "center" }, { text: techData.breakingForce?.min?.rear?.difference || "N/A", align: "center" }]
+];
+tableY = drawTable(minHeaders, minRows, maxColWidths, doc.y);
+doc.y = tableY + 10;
 
-    let tableY = doc.y;
-    const maxHeaders = [[{ text: "Maximum Breaking Force", span: 4 }]];
-    const maxRows = [
-      [{ text: "Front (Left Hand)", align: "center" }, { text: "Front (Right Hand)", align: "center" }, { text: "Sum", align: "center" }, { text: "Front Difference", align: "center" }],
-      [{ text: techData.breakingForce?.max?.front?.left || "", align: "center" }, { text: techData.breakingForce?.max?.front?.right || "", align: "center" }, { text: techData.breakingForce?.max?.front?.sum || "", align: "center" }, { text: techData.breakingForce?.max?.front?.difference || "", align: "center" }],
-      [{ text: "Rear (Left Hand)", align: "center" }, { text: "Rear (Right Hand)", align: "center" }, { text: "Sum", align: "center" }, { text: "Rear Difference", align: "center" }],
-      [{ text: techData.breakingForce?.max?.rear?.left || "", align: "center" }, { text: techData.breakingForce?.max?.rear?.right || "", align: "center" }, { text: techData.breakingForce?.max?.rear?.sum || "", align: "center" }, { text: techData.breakingForce?.max?.rear?.difference || "", align: "center" }]
-    ];
-    const maxColWidths = [100, 100, 100, 100];
-    tableY = drawTable(maxHeaders, maxRows, maxColWidths, tableY);
-    doc.y = tableY + 10;
+// ✅ Section III - Speed Testing
+doc.fontSize(12).font("Helvetica-Bold").text("III. Speed Testing", 30, doc.y);
+doc.moveDown();
+const speedHeaders = [[{ text: "Speedometer Reading" }, { text: "Speed Tester Reading" }]];
+const speedRows = [[{ text: techData.speedTesting?.speedometer || "N/A", align: "center" }, { text: techData.speedTesting?.tester || "N/A", align: "center" }]];
+const speedColWidths = [200, 200];
+tableY = drawTable(speedHeaders, speedRows, speedColWidths, doc.y);
+doc.y = tableY + 10;
 
-    const minHeaders = [[{ text: "Minimum Breaking Force", span: 4 }]];
-    const minRows = [
-      [{ text: "Front (Left Hand)", align: "center" }, { text: "Front (Right Hand)", align: "center" }, { text: "Sum", align: "center" }, { text: "Front Difference", align: "center" }],
-      [{ text: techData.breakingForce?.min?.front?.left || "", align: "center" }, { text: techData.breakingForce?.min?.front?.right || "", align: "center" }, { text: techData.breakingForce?.min?.front?.sum || "", align: "center" }, { text: techData.breakingForce?.min?.front?.difference || "", align: "center" }],
-      [{ text: "Rear (Left Hand)", align: "center" }, { text: "Rear (Right Hand)", align: "center" }, { text: "Sum", align: "center" }, { text: "Rear Difference", align: "center" }],
-      [{ text: techData.breakingForce?.min?.rear?.left || "", align: "center" }, { text: techData.breakingForce?.min?.rear?.right || "", align: "center" }, { text: techData.breakingForce?.min?.rear?.sum || "", align: "center" }, { text: techData.breakingForce?.min?.rear?.difference || "", align: "center" }]
-    ];
-    tableY = drawTable(minHeaders, minRows, maxColWidths, doc.y);
-    doc.y = tableY + 10;
+// ✅ Section IV - Turning Radius
+doc.fontSize(12).font("Helvetica-Bold").text("IV. Turning Radius Testing", 30, doc.y);
+doc.moveDown();
+const turningHeaders = [[{ text: "" }, { text: "Inner Tire" }, { text: "Outer Tire" }]];
+const turningRows = [
+  [{ text: "Left Hand", align: "center" }, { text: techData.turningRadius?.inner?.left || "N/A", align: "center" }, { text: techData.turningRadius?.outer?.left || "N/A", align: "center" }],
+  [{ text: "Right Hand", align: "center" }, { text: techData.turningRadius?.inner?.right || "N/A", align: "center" }, { text: techData.turningRadius?.outer?.right || "N/A", align: "center" }]
+];
+const turningColWidths = [100, 150, 150];
+tableY = drawTable(turningHeaders, turningRows, turningColWidths, doc.y);
+doc.y = tableY + 10;
 
-       doc.fontSize(12).text("II. Speed Testing", 30, doc.y);
-    doc.moveDown();
-    const speedHeaders = [[{ text: "Speedometer Reading" }, { text: "Speed Tester Reading" }]];
-    const speedRows = [[{ text: techData.speedTesting?.speedometer || "", align: "center" }, { text: techData.speedTesting?.tester || "", align: "center" }]];
-    const speedColWidths = [200, 200];
-    tableY = drawTable(speedHeaders, speedRows, speedColWidths, doc.y);
-    doc.y = tableY + 10;
+// ✅ Section V - Slip Tester
+doc.fontSize(12).font("Helvetica-Bold").text("V. Slip Tester", 30, doc.y);
+doc.moveDown();
+const slipHeaders = [[{ text: "Speed" }, { text: "Value" }]];
+const slipRows = (techData.slipTester || []).map(slip => [{ text: slip.speed || "N/A", align: "center" }, { text: slip.value || "N/A", align: "center" }]);
+const slipColWidths = [200, 200];
+tableY = drawTable(slipHeaders, slipRows, slipColWidths, doc.y);
+doc.y = tableY + 10;
 
-    doc.fontSize(12).text("III. Turning Radius", 30, doc.y);
-    doc.moveDown();
-    const turningHeaders = [[{ text: "" }, { text: "Inner Tire" }, { text: "Outer Tire" }]];
-    const turningRows = [
-      [{ text: "Left Hand", align: "center" }, { text: techData.turningRadius?.inner?.left || "", align: "center" }, { text: techData.turningRadius?.outer?.left || "", align: "center" }],
-      [{ text: "Right Hand", align: "center" }, { text: techData.turningRadius?.inner?.right || "", align: "center" }, { text: techData.turningRadius?.outer?.right || "", align: "center" }]
-    ];
-    const turningColWidths = [100, 150, 150];
-    tableY = drawTable(turningHeaders, turningRows, turningColWidths, doc.y);
-    doc.y = tableY + 10;
+// ✅ Section VI - Headlight Tester
+doc.fontSize(12).font("Helvetica-Bold").text("VI. Headlight Tester", 30, doc.y);
+doc.moveDown();
+const headlightHeaders = [[{ text: "" }, { text: "Low Beam", span: 2 }, { text: "High Beam", span: 2 }], [{ text: "" }, { text: "Before Adjustment" }, { text: "After Adjustment" }, { text: "Before Adjustment" }, { text: "After Adjustment" }]];
+const headlightRows = [
+  [{ text: "Left Hand", align: "center" }, { text: techData.headlightTester?.lowBeam?.before?.left || "N/A", align: "center" }, { text: techData.headlightTester?.lowBeam?.after?.left || "N/A", align: "center" }, { text: techData.headlightTester?.highBeam?.before?.left || "N/A", align: "center" }, { text: techData.headlightTester?.highBeam?.after?.left || "N/A", align: "center" }],
+  [{ text: "Right Hand", align: "center" }, { text: techData.headlightTester?.lowBeam?.before?.right || "N/A", align: "center" }, { text: techData.headlightTester?.lowBeam?.after?.right || "N/A", align: "center" }, { text: techData.headlightTester?.highBeam?.before?.right || "N/A", align: "center" }, { text: techData.headlightTester?.highBeam?.after?.right || "N/A", align: "center" }]
+];
+const headlightColWidths = [80, 80, 80, 80, 80];
+tableY = drawTable(headlightHeaders, headlightRows, headlightColWidths, doc.y, 8);
+doc.y = tableY + 10;
 
-    doc.fontSize(12).text("IV. Slip Tester", 30, doc.y);
-    doc.moveDown();
-    const slipHeaders = [[{ text: "Speed" }, { text: "Value" }]];
-    const slipRows = (techData.slipTester || []).map(slip => [{ text: slip.speed || "", align: "center" }, { text: slip.value || "", align: "center" }]);
-    const slipColWidths = [200, 200];
-    tableY = drawTable(slipHeaders, slipRows, slipColWidths, doc.y);
-    doc.y = tableY + 10;
-
-    doc.fontSize(12).text("V. Headlight Tester", 30, doc.y);
-    doc.moveDown();
-    const headlightHeaders = [[{ text: "" }, { text: "Low Beam", span: 2 }, { text: "High Beam", span: 2 }], [{ text: "" }, { text: "Before Adjustment" }, { text: "After Adjustment" }, { text: "Before Adjustment" }, { text: "After Adjustment" }]];
-    const headlightRows = [
-      [{ text: "Left Hand", align: "center" }, { text: techData.headlightTester?.lowBeam?.before?.left || "N/A", align: "center" }, { text: techData.headlightTester?.lowBeam?.after?.left || "N/A", align: "center" }, { text: techData.headlightTester?.highBeam?.before?.left || "N/A", align: "center" }, { text: techData.headlightTester?.highBeam?.after?.left || "N/A", align: "center" }],
-      [{ text: "Right Hand", align: "center" }, { text: techData.headlightTester?.lowBeam?.before?.right || "N/A", align: "center" }, { text: techData.headlightTester?.lowBeam?.after?.right || "N/A", align: "center" }, { text: techData.headlightTester?.highBeam?.before?.right || "N/A", align: "center" }, { text: techData.headlightTester?.highBeam?.after?.right || "N/A", align: "center" }]
-    ];
-    const headlightColWidths = [80, 80, 80, 80, 80];
-    tableY = drawTable(headlightHeaders, headlightRows, headlightColWidths, doc.y, 8);
-    doc.y = tableY + 10;
-
-    doc.fontSize(12).text("VI. ABS Testing (if equipped)", 30, doc.y);
-    doc.moveDown();
-    const absHeaders = [[{ text: "Option" }, { text: "Remarks" }]];
-    const absRows = (techData.absTesting || []).map(abs => [{ text: abs.option || "N/A", align: "left" }, { text: abs.remarks || "N/A", align: "left" }]);
-    const absColWidths = [200, 200];
-    tableY = drawTable(absHeaders, absRows, absColWidths, doc.y);
-    doc.y = tableY + 10;
+// ✅ Section VII - ABS Testing
+doc.fontSize(12).font("Helvetica-Bold").text("VII. ABS Testing (if equipped)", 30, doc.y);
+doc.moveDown();
+const absHeaders = [[{ text: "Option" }, { text: "Remarks" }]];
+const absRows = (techData.absTesting || []).map(abs => [{ text: abs.option || "N/A", align: "center" }, { text: abs.remarks || "N/A", align: "center" }]);
+const absColWidths = [200, 200];
+tableY = drawTable(absHeaders, absRows, absColWidths, doc.y);
+doc.y = tableY + 10;
 
     // ✅ Clean up temp files before ending
     tempFiles.forEach(filePath => cleanupTempFile(filePath));

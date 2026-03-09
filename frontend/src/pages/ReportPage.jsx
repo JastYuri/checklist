@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance";
 import { toRoman } from "../utils/roman"; // Assuming you have this for Roman numerals
+import { FileText, Download, Eye, TrendingUp, CheckCircle, AlertCircle, Zap } from "lucide-react";
 
 const ReportPage = () => {
   const { id } = useParams(); // Check if we're viewing a single job
@@ -9,7 +10,15 @@ const ReportPage = () => {
   const [loading, setLoading] = useState(true);
   const [singleJob, setSingleJob] = useState(null);
   const [singleJobLoading, setSingleJobLoading] = useState(false);
-  const [downloading, setDownloading] = useState(false); // Add this state at the top of the component
+  const [downloading, setDownloading] = useState(false);
+  
+  // ✅ Pagination & Filter States
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10); // Show 10 jobs per page
+  const [searchTerm, setSearchTerm] = useState(""); // Search by customer/model
+  const [selectedCategory, setSelectedCategory] = useState(""); // Filter by category
+  const [dateFilter, setDateFilter] = useState(""); // Filter by date
+  const [defectFilter, setDefectFilter] = useState("all"); // all, with-defects, no-defects
 
   useEffect(() => {
     if (id) {
@@ -61,6 +70,45 @@ const ReportPage = () => {
       day: "numeric",
     }); // e.g. July 22, 2026
   };
+
+  // ✅ Filter and search logic
+  const getFilteredJobs = () => {
+    return jobs.filter(job => {
+      // Search by customer or model (case-insensitive)
+      const searchLower = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm || 
+        (job.jobInfo?.customer?.toLowerCase().includes(searchLower)) ||
+        (job.jobInfo?.model?.toLowerCase().includes(searchLower));
+
+      // Filter by category
+      const matchesCategory = !selectedCategory || 
+        (job.category?._id === selectedCategory);
+
+      // Filter by date
+      const matchesDate = !dateFilter || 
+        (new Date(job.jobInfo?.date).toDateString() === new Date(dateFilter).toDateString());
+
+      // Filter by defect status
+      const hasDefects = job.defectSummary?.length > 0;
+      const matchesDefectFilter = 
+        defectFilter === "all" || 
+        (defectFilter === "with-defects" && hasDefects) ||
+        (defectFilter === "no-defects" && !hasDefects);
+
+      return matchesSearch && matchesCategory && matchesDate && matchesDefectFilter;
+    });
+  };
+
+  const filteredJobs = getFilteredJobs();
+  const totalPages = Math.ceil(filteredJobs.length / itemsPerPage);
+  const startIdx = (currentPage - 1) * itemsPerPage;
+  const endIdx = startIdx + itemsPerPage;
+  const paginatedJobs = filteredJobs.slice(startIdx, endIdx);
+
+  // ✅ Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, dateFilter, defectFilter]);
 
   const handleDownloadPDF = async (jobId, categoryName) => {
     console.log("📥 Starting PDF download for job:", jobId);
@@ -181,18 +229,20 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
           const imageUrl = appearanceImages?.[side] || null;
           
           return (
-            <div key={side} className="card bg-base-200 shadow-md">
+            <div key={side} className="card bg-base-100 border border-base-300 shadow-md">
               <div className="card-body">
-                <h5 className="card-title text-md capitalize">{side} Side</h5>
-                <div className="relative">
+                <h5 className="card-title text-md capitalize mb-3">{side.charAt(0).toUpperCase() + side.slice(1)} Side</h5>
+                
+                {/* Image with SVG overlay - similar to ChecklistWizard preview */}
+                <div className="relative w-full bg-base-200 rounded border border-base-300 overflow-hidden" style={{ aspectRatio: '16/9' }}>
                   {imageUrl ? (
                     <>
                       <img
                         src={imageUrl}
                         alt={`${side} view`}
-                        className="w-full h-48 object-contain rounded"
+                        className="w-full h-full object-contain"
                       />
-                      {/* SVG Overlay for shapes - adjusted to scale with image */}
+                      {/* SVG Overlay for shapes */}
                       <svg
                         className="absolute inset-0 w-full h-full pointer-events-none"
                         viewBox="0 0 1 1"
@@ -200,75 +250,77 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
                         style={{ zIndex: 10 }}
                       >
                         {sideMarks.map((mark, idx) => {
-                          // Assume 'circle' if type is missing or 'circle'
                           if (!mark.type || mark.type === 'circle') {
                             const cx = mark.x;
                             const cy = mark.y;
                             const r = 0.03;
                             return (
-                              <circle
-                                key={`shape-${idx}`}
-                                cx={cx}
-                                cy={cy}
-                                r={r}
-                                fill="none"
-                                stroke="red"
-                                strokeWidth="0.005"
-                              />
+                              <g key={`shape-${idx}`}>
+                                <circle
+                                  cx={cx}
+                                  cy={cy}
+                                  r={r}
+                                  fill="none"
+                                  stroke="red"
+                                  strokeWidth="0.005"
+                                />
+                                {/* Defect name label above circle */}
+                                {mark.defectName && (
+                                  <text
+                                    x={cx + r + 0.02}
+                                    y={cy - r - 0.02}
+                                    fontSize="0.04"
+                                    fill="red"
+                                    fontWeight="bold"
+                                    textAnchor="start"
+                                  >
+                                    {mark.defectName}
+                                  </text>
+                                )}
+                              </g>
                             );
                           } else if (mark.type === 'path' && Array.isArray(mark.path) && mark.path.length > 1) {
                             const d = `M ${mark.path[0].x} ${mark.path[0].y} L ${mark.path.slice(1).map(p => `${p.x} ${p.y}`).join(' L ')}`;
                             return (
-                              <path
-                                key={`shape-${idx}`}
-                                d={d}
-                                fill="none"
-                                stroke="red"
-                                strokeWidth="0.005"
-                              />
+                              <g key={`shape-${idx}`}>
+                                <path
+                                  d={d}
+                                  fill="none"
+                                  stroke="red"
+                                  strokeWidth="0.005"
+                                />
+                                {/* Defect name label at start of path */}
+                                {mark.defectName && mark.path.length > 0 && (
+                                  <text
+                                    x={mark.path[0].x + 0.02}
+                                    y={mark.path[0].y - 0.02}
+                                    fontSize="0.04"
+                                    fill="red"
+                                    fontWeight="bold"
+                                    textAnchor="start"
+                                  >
+                                    {mark.defectName}
+                                  </text>
+                                )}
+                              </g>
                             );
                           }
                           return null;
                         })}
                       </svg>
-                      {/* Overlay text beside the circle */}
-                      {sideMarks.map((mark, idx) => (
-                        <div
-                          key={`text-${idx}`}
-                          className="absolute text-red-500 font-bold text-sm"
-                          style={{
-                            left: `${mark.x * 100 + 5}%`, // Offset to the right of the circle
-                            top: `${mark.y * 100}%`,
-                            transform: 'translateY(-50%)', // Center vertically
-                            zIndex: 20
-                          }}
-                        >
-                          {mark.defectName?.split(' ')[0] || "Defect"}
-                        </div>
-                      ))}
                     </>
                   ) : (
-                    <div className="w-full h-48 bg-gray-300 rounded flex items-center justify-center">
-                      <span className="text-gray-500">No {side} image</span>
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="text-base-content/50">No {side} image</span>
                     </div>
                   )}
                 </div>
-                {/* Remarks */}
-                {sideMarks.length > 0 && (
-                  <div className="mt-2">
-                    <h6 className="font-medium">Remarks:</h6>
-                    {sideMarks.map((mark, idx) => (
-                      mark.remarks && (
-                        <p key={idx} className="text-sm text-gray-600">- {mark.defectName || "Defect"}: {mark.remarks}</p>
-                      )
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           );
         })}
       </div>
+
       {/* Legend */}
       <div className="alert alert-info shadow-md">
         <div className="text-base font-semibold">
@@ -547,135 +599,195 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
   };
 
   if (id) {
-    // Single Job View
-    if (singleJobLoading) return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="loading loading-spinner text-primary"></div>
+  // Single Job View
+  if (singleJobLoading) return (
+    <div className="flex items-center justify-center min-h-screen bg-base-200">
+      <div className="text-center">
+        <div className="loading loading-spinner text-primary" style={{ width: '80px', height: '80px' }}></div>
+        <p className="mt-4 text-gray-600 font-semibold">Loading job report...</p>
       </div>
-    );
-    if (!singleJob) return (
-      <div className="p-6 text-center">
-        <h2 className="text-2xl font-bold text-error">Job Not Found</h2>
-        <p className="mt-4">The requested job could not be found.</p>
-        <Link to="/report" className="btn btn-primary mt-4">Back to Reports</Link>
+    </div>
+  );
+  if (!singleJob) return (
+    <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
+      <div className="card bg-base-100 shadow-xl max-w-md w-full">
+        <div className="card-body text-center">
+          <AlertCircle className="mx-auto mb-4 text-error" size={64} />
+          <h2 className="text-2xl font-bold text-error mb-2">Job Not Found</h2>
+          <p className="text-gray-600 mb-6">The requested job report could not be found. It may have been deleted or the ID is incorrect.</p>
+          <div className="card-actions justify-center gap-2">
+            <Link to="/report" className="btn btn-primary gap-2">
+              <FileText size={20} /> Back to Reports
+            </Link>
+          </div>
+        </div>
       </div>
-    );
+    </div>
+  );
 
     return (
       <div className="min-h-screen bg-base-200 p-4 sm:p-6">
-        <div className="max-w-6xl mx-auto">
-          <Link to="/report" className="btn btn-sm btn-outline mb-6 inline-flex items-center">
-            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Job List
-          </Link>
-          
-          <div className="card bg-base-100 shadow-xl mb-6">
-            <div className="card-body">
-              <h2 className="card-title text-3xl text-primary mb-4">
-                Job Report: {singleJob.category?.name}
-              </h2>
-
-              {/* Job Info Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">Customer</div>
-                  <div className="stat-value text-lg">{singleJob.jobInfo?.customer || "N/A"}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">Model</div>
-                  <div className="stat-value text-lg">{singleJob.jobInfo?.model || "N/A"}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">Body Type</div>
-                  <div className="stat-value text-lg">{singleJob.jobInfo?.bodyType || "N/A"}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">Chassis No.</div>
-                  <div className="stat-value text-lg">{singleJob.jobInfo?.chassisNum || "N/A"}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">Engine No.</div>
-                  <div className="stat-value text-lg">{singleJob.jobInfo?.engineNum || "N/A"}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">Date</div>
-                  <div className="stat-value text-lg">{formatDate(singleJob.jobInfo?.date)}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">JO No.</div>
-                  <div className="stat-value text-lg">{singleJob.jobInfo?.joNo || "N/A"}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">C/S No.</div>
-                  <div className="stat-value text-lg">{singleJob.jobInfo?.csNo || "N/A"}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">Key No.</div>
-                  <div className="stat-value text-lg">{singleJob.jobInfo?.keyNumber || "N/A"}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg p-4">
-                  <div className="stat-title">Job Type</div>
-                  <div className="stat-value text-lg">{singleJob.jobInfo?.jobType || "N/A"}</div>
-                </div>
-              </div>
-
-              {/* Legend */}
-              <div className="alert alert-info mb-6">
-                <div className="flex flex-wrap space-x-4 sm:space-x-6 text-sm">
-                  <span className="flex items-center"><span className="text-lg mr-1">⭕</span> Good</span>
-                  <span className="flex items-center"><span className="text-lg mr-1">❌</span> No Good</span>
-                  <span className="flex items-center"><span className="text-lg mr-1">ⓧ</span> Corrected</span>
-                  <span className="flex items-center"><span className="text-lg mr-1">🚫</span> N/A</span>
-                </div>
-              </div>
-
-              {/* Checklist */}
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-secondary">Checklist</h3>
-                {singleJob.checklist.map((section, sIdx) => (
-                  <div key={section._id} className="card bg-base-200 shadow-md">
-                    <div className="card-body">
-                      <h4 className="card-title text-lg text-accent">{toRoman(sIdx + 1)}. {section.section}</h4>
-                      <div className="space-y-2">
-                        {renderItems(buildItemTree(section.items), 0, "")} {/* Start with empty prefix */}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Special Checklists for Viewing */}
-              <div className="space-y-6 mt-8">
-                {renderAppearanceChecklist(singleJob.appearanceMarks, singleJob.appearanceImages)}
-                {renderSummaryChecklist(singleJob.defectSummary)}
-                {renderTechnicalChecklist(singleJob.technicalTests)}
-              </div>
-
-              {/* Download PDF */}
-              <div className="card-actions justify-end mt-6">
-                <button
-                  className="btn btn-primary btn-lg"
-                  onClick={() => handleDownloadPDF(singleJob._id, singleJob.category?.name)}
-                  disabled={downloading} // Disable during download
-                >
-                  {downloading ? (
-                    <>
-                      <div className="loading loading-spinner loading-sm mr-2"></div>
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Download PDF Report
-                    </>
-                  )}
-                </button>
+        <div className="max-w-7xl mx-auto">
+          {/* ✅ Enhanced Single Job Header */}
+          <div className="mb-8">
+            <Link to="/report" className="btn btn-ghost gap-2 mb-4">
+              <span>←</span> Back to Reports
+            </Link>
+            
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+              <h1 className="text-4xl md:text-5xl font-bold flex items-center">
+                <FileText className="mr-3 text-primary" size={40} /> Job Report
+              </h1>
+              <div className="badge badge-lg badge-primary font-bold">
+                {singleJob.category?.name || "Uncategorized"}
               </div>
             </div>
+          </div>
+
+          {/* ✅ Job Info Cards - Enhanced */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+            <div className="card bg-linear-to-br from-blue-50 to-blue-100 border-l-4 border-blue-500 shadow-md">
+              <div className="card-body p-4">
+                <h5 className="text-xs text-gray-600 font-semibold">Customer</h5>
+                <p className="text-2xl font-bold text-gray-900">{singleJob.jobInfo?.customer || "N/A"}</p>
+              </div>
+            </div>
+
+            <div className="card bg-linear-to-br from-green-50 to-green-100 border-l-4 border-green-500 shadow-md">
+              <div className="card-body p-4">
+                <h5 className="text-xs text-gray-600 font-semibold">Model</h5>
+                <p className="text-2xl font-bold text-gray-900">{singleJob.jobInfo?.model || "N/A"}</p>
+              </div>
+            </div>
+
+            <div className="card bg-linear-to-br from-purple-50 to-purple-100 border-l-4 border-purple-500 shadow-md">
+              <div className="card-body p-4">
+                <h5 className="text-xs text-gray-600 font-semibold">Body Type</h5>
+                <p className="text-2xl font-bold text-gray-900">{singleJob.jobInfo?.bodyType || "N/A"}</p>
+              </div>
+            </div>
+
+            <div className="card bg-linear-to-br from-orange-50 to-orange-100 border-l-4 border-orange-500 shadow-md">
+              <div className="card-body p-4">
+                <h5 className="text-xs text-gray-600 font-semibold">Chassis Number</h5>
+                <p className="text-lg font-bold font-mono text-gray-900">{singleJob.jobInfo?.chassisNum || "N/A"}</p>
+              </div>
+            </div>
+
+            <div className="card bg-linear-to-br from-pink-50 to-pink-100 border-l-4 border-pink-500 shadow-md">
+              <div className="card-body p-4">
+                <h5 className="text-xs text-gray-600 font-semibold">Engine Number</h5>
+                <p className="text-lg font-bold font-mono text-gray-900">{singleJob.jobInfo?.engineNum || "N/A"}</p>
+              </div>
+            </div>
+
+            <div className="card bg-linear-to-br from-cyan-50 to-cyan-100 border-l-4 border-cyan-500 shadow-md">
+              <div className="card-body p-4">
+                <h5 className="text-xs text-gray-600 font-semibold">Inspection Date</h5>
+                <p className="text-2xl font-bold text-gray-900">{formatDate(singleJob.jobInfo?.date)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Additional Job Info Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 p-4 bg-base-100 rounded-lg shadow-md">
+            <div className="border-l-4 border-blue-400 pl-3">
+              <div className="text-xs opacity-75 font-semibold">JO No.</div>
+              <div className="text-lg font-bold">{singleJob.jobInfo?.joNo || "N/A"}</div>
+            </div>
+            <div className="border-l-4 border-green-400 pl-3">
+              <div className="text-xs opacity-75 font-semibold">C/S No.</div>
+              <div className="text-lg font-bold">{singleJob.jobInfo?.csNo || "N/A"}</div>
+            </div>
+            <div className="border-l-4 border-purple-400 pl-3">
+              <div className="text-xs opacity-75 font-semibold">Key No.</div>
+              <div className="text-lg font-bold">{singleJob.jobInfo?.keyNumber || "N/A"}</div>
+            </div>
+            <div className="border-l-4 border-orange-400 pl-3">
+              <div className="text-xs opacity-75 font-semibold">Job Type</div>
+              <div className="text-lg font-bold badge badge-outline">{singleJob.jobInfo?.jobType || "N/A"}</div>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="alert alert-info mb-8 shadow-md">
+            <AlertCircle size={20} />
+            <div>
+              <div className="font-semibold">Item Status Legend:</div>
+              <div className="flex flex-wrap gap-4 mt-2 text-sm">
+                <span className="flex items-center"><span className="text-lg mr-2">⭕</span> Good (No Issues)</span>
+                <span className="flex items-center"><span className="text-lg mr-2">❌</span> No Good (Found Issues)</span>
+                <span className="flex items-center"><span className="text-lg mr-2">ⓧ</span> Corrected (Fixed)</span>
+                <span className="flex items-center"><span className="text-lg mr-2">🚫</span> N/A (Not Applicable)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Checklist Section */}
+          <div className="space-y-6 mb-8">
+            <h2 className="text-3xl font-bold flex items-center gap-2">
+              <CheckCircle size={32} className="text-primary" /> Inspection Checklist
+            </h2>
+            {singleJob.checklist.map((section, sIdx) => (
+              <div key={section._id} className="card bg-base-100 shadow-lg border-l-4 border-primary">
+                <div className="card-body">
+                  <h3 className="card-title text-xl text-primary mb-4 flex items-center gap-2">
+                    <span className="badge badge-primary text-lg">{toRoman(sIdx + 1)}</span>
+                    {section.section}
+                  </h3>
+                  <div className="space-y-3">
+                    {renderItems(buildItemTree(section.items), 0, "")}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Special Checklists for Viewing */}
+          <div className="space-y-8 mb-8">
+            {/* Appearance Checklist */}
+            <div className="card bg-base-100 shadow-lg border-l-4 border-warning">
+              <div className="card-body">
+                {renderAppearanceChecklist(singleJob.appearanceMarks, singleJob.appearanceImages)}
+              </div>
+            </div>
+
+            {/* Summary Checklist */}
+            <div className="card bg-base-100 shadow-lg border-l-4 border-error">
+              <div className="card-body">
+                {renderSummaryChecklist(singleJob.defectSummary)}
+              </div>
+            </div>
+
+            {/* Technical Checklist */}
+            <div className="card bg-base-100 shadow-lg border-l-4 border-secondary">
+              <div className="card-body">
+                {renderTechnicalChecklist(singleJob.technicalTests)}
+              </div>
+            </div>
+          </div>
+
+          {/* Download PDF Button */}
+          <div className="flex justify-center gap-4">
+            <button
+              className="btn btn-primary btn-lg gap-2"
+              onClick={() => handleDownloadPDF(singleJob._id, singleJob.category?.name)}
+              disabled={downloading}
+            >
+              {downloading ? (
+                <>
+                  <div className="loading loading-spinner loading-sm"></div>
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <Download size={20} /> Download PDF Report
+                </>
+              )}
+            </button>
+            <Link to="/report" className="btn btn-ghost btn-lg gap-2">
+              Back to Reports
+            </Link>
           </div>
         </div>
       </div>
@@ -690,12 +802,20 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
   );
 
   if (!jobs.length) return (
-    <div className="hero min-h-screen bg-base-200">
-      <div className="hero-content text-center">
-        <div>
-          <h1 className="text-5xl font-bold">No Jobs Available</h1>
-          <p className="py-6">There are no job reports to display at the moment.</p>
-          <Link to="/checklist" className="btn btn-primary">Create a Job</Link>
+    <div className="min-h-screen bg-base-200 flex items-center justify-center p-4">
+      <div className="card bg-base-100 shadow-xl max-w-md w-full">
+        <div className="card-body text-center">
+          <AlertCircle className="mx-auto mb-4 text-warning" size={64} />
+          <h1 className="text-3xl font-bold mb-2">No Jobs Available</h1>
+          <p className="text-gray-600 mb-6">There are no job reports to display at the moment. Create a new inspection to get started.</p>
+          <div className="card-actions justify-center gap-2">
+            <Link to="/checklist" className="btn btn-primary gap-2">
+              <CheckCircle size={20} /> Create a Job
+            </Link>
+            <Link to="/" className="btn btn-ghost gap-2">
+              Go Home
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -705,10 +825,153 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
 
   return (
     <div className="min-h-screen bg-base-200 p-4 sm:p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="card bg-base-100 shadow-xl">
+      <div className="max-w-7xl mx-auto">
+        {/* ✅ Enhanced Header */}
+        <div className="mb-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <h1 className="text-4xl md:text-5xl font-bold flex items-center">
+              <FileText className="mr-3 text-primary" size={40} /> Job Reports
+            </h1>
+            <div className="badge badge-lg badge-primary">Total: {filteredJobs.length} of {jobs.length} Jobs</div>
+          </div>
+          
+          {/* Stats Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="card bg-linear-to-br from-blue-400 to-blue-600 text-white shadow-lg">
+              <div className="card-body">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-4xl font-bold">{filteredJobs.length}</div>
+                    <div className="text-sm opacity-90">Filtered Results</div>
+                  </div>
+                  <Zap size={48} className="opacity-30" />
+                </div>
+              </div>
+            </div>
+
+            <div className="card bg-linear-to-br from-green-400 to-green-600 text-white shadow-lg">
+              <div className="card-body">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-4xl font-bold">
+                      {filteredJobs.filter(j => j.defectSummary?.length > 0).length}
+                    </div>
+                    <div className="text-sm opacity-90">With Defects</div>
+                  </div>
+                  <AlertCircle size={48} className="opacity-30" />
+                </div>
+              </div>
+            </div>
+
+            <div className="card bg-linear-to-br from-purple-400 to-purple-600 text-white shadow-lg">
+              <div className="card-body">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-4xl font-bold">
+                      {filteredJobs.filter(j => j.appearanceMarks?.length > 0).length}
+                    </div>
+                    <div className="text-sm opacity-90">Appearance Marked</div>
+                  </div>
+                  <CheckCircle size={48} className="opacity-30" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ✅ Search & Filter Controls */}
+        <div className="card bg-base-100 shadow-lg mb-6">
           <div className="card-body">
-            <h2 className="card-title text-3xl text-primary mb-6">Job Reports</h2>
+            <h3 className="card-title text-lg mb-4">🔍 Search & Filter</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Search by Customer/Model */}
+              <div className="form-control">
+                <label className="label text-sm font-semibold">
+                  <span className="label-text">Search (Customer/Model)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="input input-bordered input-sm"
+                />
+              </div>
+
+              {/* Filter by Category */}
+              <div className="form-control">
+                <label className="label text-sm font-semibold">
+                  <span className="label-text">Category</span>
+                </label>
+                <select
+                  value={selectedCategory}
+                  onChange={(e) => setSelectedCategory(e.target.value)}
+                  className="select select-bordered select-sm"
+                >
+                  <option value="">All Categories</option>
+                  {[...new Set(jobs.map(j => JSON.stringify({id: j.category?._id, name: j.category?.name})))].map(cat => {
+                    const {id, name} = JSON.parse(cat);
+                    return id ? <option key={id} value={id}>{name}</option> : null;
+                  })}
+                </select>
+              </div>
+
+              {/* Filter by Date */}
+              <div className="form-control">
+                <label className="label text-sm font-semibold">
+                  <span className="label-text">Date</span>
+                </label>
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className="input input-bordered input-sm"
+                />
+              </div>
+
+              {/* Filter by Defect Status */}
+              <div className="form-control">
+                <label className="label text-sm font-semibold">
+                  <span className="label-text">Defect Status</span>
+                </label>
+                <select
+                  value={defectFilter}
+                  onChange={(e) => setDefectFilter(e.target.value)}
+                  className="select select-bordered select-sm"
+                >
+                  <option value="all">All Jobs</option>
+                  <option value="with-defects">With Defects</option>
+                  <option value="no-defects">No Defects</option>
+                </select>
+              </div>
+
+              {/* Clear Filters Button */}
+              <div className="form-control flex justify-end">
+                <label className="label text-sm font-semibold">
+                  <span className="label-text">&nbsp;</span>
+                </label>
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedCategory("");
+                    setDateFilter("");
+                    setDefectFilter("all");
+                  }}
+                  className="btn btn-ghost btn-sm"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ✅ Enhanced Table Section with Pagination */}
+        <div className="card bg-base-100 shadow-xl">
+          <div className="card-body p-6">
+            <h2 className="card-title text-2xl text-primary mb-6 flex items-center">
+              <TrendingUp className="mr-2" size={28} /> Job Listing
+            </h2>
 
             <div className="overflow-x-auto">
               <table className="table table-zebra w-full">
@@ -719,44 +982,55 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
                     <th className="text-left">Model</th>
                     <th className="text-left">Body Type</th>
                     <th className="text-left">Category</th>
+                    <th className="text-center">Defects</th>
                     <th className="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {jobs.map(job => (
-                    <tr key={job._id} className="hover:bg-base-200">
+                  {paginatedJobs.map(job => (
+                    <tr key={job._id} className="hover:bg-base-200 transition">
                       <td className="font-medium">{formatDate(job.jobInfo?.date)}</td>
-                      <td>{job.jobInfo?.customer || "N/A"}</td>
-                      <td>{job.jobInfo?.model || "N/A"}</td>
-                      <td>{job.jobInfo?.bodyType || "N/A"}</td>
                       <td>
-                        <span className="badge badge-primary">{job.category?.name}</span>
+                        <span className="font-semibold">{job.jobInfo?.customer || "N/A"}</span>
+                      </td>
+                      <td>{job.jobInfo?.model || "N/A"}</td>
+                      <td>
+                        <span className="badge badge-outline">{job.jobInfo?.bodyType || "N/A"}</span>
+                      </td>
+                      <td>
+                        <span className="badge badge-primary font-semibold">{job.category?.name || "Uncategorized"}</span>
                       </td>
                       <td className="text-center">
-                        <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-2">
-                          <Link to={`/report/${job._id}`} className="btn btn-sm btn-outline btn-info">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            View
+                        {job.defectSummary?.length > 0 ? (
+                          <span className="badge badge-warning gap-2">
+                            {job.defectSummary.length}
+                          </span>
+                        ) : (
+                          <span className="badge badge-success">✓ None</span>
+                        )}
+                      </td>
+                      <td className="text-center">
+                        <div className="flex flex-col sm:flex-row justify-center gap-2">
+                          <Link 
+                            to={`/report/${job._id}`} 
+                            className="btn btn-sm btn-info gap-1 text-white"
+                            title="View Report"
+                          >
+                            <Eye size={16} /> View
                           </Link>
                           <button
-                            className="btn btn-sm btn-primary"
+                            className="btn btn-sm btn-primary gap-1"
                             onClick={() => handleDownloadPDF(job._id, job.category?.name)}
-                            disabled={downloading} // Disable during any download
+                            disabled={downloading}
+                            title="Download PDF"
                           >
                             {downloading ? (
                               <>
-                                <div className="loading loading-spinner loading-xs mr-1"></div>
-                                ...
+                                <div className="loading loading-spinner loading-xs"></div>
                               </>
                             ) : (
                               <>
-                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                PDF
+                                <Download size={16} /> PDF
                               </>
                             )}
                           </button>
@@ -767,6 +1041,48 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
                 </tbody>
               </table>
             </div>
+
+            {/* ✅ No results message */}
+            {paginatedJobs.length === 0 && (
+              <div className="text-center py-8">
+                <AlertCircle size={48} className="mx-auto mb-3 text-warning opacity-50" />
+                <p className="text-base-content/70 font-semibold">No jobs match your filters</p>
+                <p className="text-base-content/50 text-sm">Try adjusting your search criteria</p>
+              </div>
+            )}
+
+            {/* ✅ Pagination Controls */}
+            {filteredJobs.length > 0 && (
+              <div className="join grid grid-cols-2 md:grid-cols-5 gap-2 mt-6 pt-6 border-t border-base-300">
+                {/* Previous Button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="join-item btn btn-sm"
+                >
+                  « Previous
+                </button>
+
+                {/* Page Numbers */}
+                <div className="join-item btn btn-sm btn-disabled md:col-span-2">
+                  Page {currentPage} of {totalPages}
+                </div>
+
+                {/* Results Info */}
+                <div className="join-item btn btn-sm btn-disabled md:col-span-2">
+                  Showing {startIdx + 1}-{Math.min(endIdx, filteredJobs.length)} of {filteredJobs.length}
+                </div>
+
+                {/* Next Button */}
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="join-item btn btn-sm"
+                >
+                  Next »
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

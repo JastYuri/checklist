@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"; // ✅ Added useRef for out
 import axiosInstance from "../utils/axiosInstance";
 import toast, { Toaster } from "react-hot-toast";
 import { toRoman } from "../utils/roman";
-import { Plus, Trash2, Edit, Search, Image, Eye, X } from "lucide-react"; // ✅ Added Image, Eye, X icons for image features
+import { Plus, Trash2, Edit, Search, Image, Eye, X, ChevronDown, FileText, List } from "lucide-react"; // ✅ Added ChevronDown, FileText, List icons
 
 
 
@@ -243,23 +243,20 @@ const handleManageChecklist = async (cat) => {
   }
   };
 
- // ✅ New functions for image handling (unchanged)
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error("Please select a valid image file (JPG, PNG, GIF).");
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image size must be less than 5MB.");
-        return;
-      }
-      setItemImage(file);
-      setImagePreview(URL.createObjectURL(file));
+ const handleImageChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    // ✅ Removed MIME type restriction to accept ANY image format (HEIC, AVIF, etc.)
+    // ✅ Increased size limit to 20MB (adjust based on backend capability)
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Image size must be less than 20MB.");
+      return;
     }
-  };
+    setItemImage(file);
+    // ✅ Ensure preview is generated immediately
+    setImagePreview(URL.createObjectURL(file));
+  }
+};
 
   const removeImage = () => {
     setItemImage(null);
@@ -273,21 +270,17 @@ const handleManageChecklist = async (cat) => {
 
   // ✅ New functions for edit item
   const handleEditImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error("Please select a valid image file (JPG, PNG, GIF).");
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error("Image size must be less than 5MB.");
-        return;
-      }
-      setEditItemImage(file);
-      setEditImagePreview(URL.createObjectURL(file));
+  const file = e.target.files[0];
+  if (file) {
+    // ✅ Removed MIME type restriction
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Image size must be less than 20MB.");
+      return;
     }
-  };
+    setEditItemImage(file);
+    setEditImagePreview(URL.createObjectURL(file));
+  }
+};
 
   const removeEditImage = () => {
     setEditItemImage(null);
@@ -304,23 +297,19 @@ const handleEditItem = (sectionId, item) => {
   setEditItemModalOpen(true);
 };
 
-// ✅ New functions for appearance images
 const handleAppearanceImageChange = (side, e) => {
   const file = e.target.files[0];
   if (file) {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-    if (!allowedTypes.includes(file.type)) {
-      toast.error("Please select a valid image file (JPG, PNG, GIF).");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image size must be less than 5MB.");
+    // ✅ Removed MIME type restriction
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("Image size must be less than 20MB.");
       return;
     }
     setAppearanceImages(prev => ({ ...prev, [side]: file }));
     setAppearanceImagePreviews(prev => ({ ...prev, [side]: URL.createObjectURL(file) }));
   }
 };
+
 
 const removeAppearanceImage = (side) => {
   setAppearanceImages(prev => ({ ...prev, [side]: null }));
@@ -456,38 +445,92 @@ const handleSaveAppearanceImages = async () => {
   }, [checklistModalOpen, addSectionModalOpen, addItemModalOpen, deleteSectionModalOpen, deleteItemModalOpen, viewImageModalOpen, editItemModalOpen]); // ✅ Added editItemModalOpen
 
 
-  const renderRows = (cats, level = 0, colorIndex = 0) => {
+  // ✅ NEW: Render categories as collapsible cards with dropdown pattern (closed by default)
+  const renderCategoryCards = (cats, level = 0, colorIndex = 0) => {
     const colorClasses = [
-      { parent: "bg-gradient-to-r from-base-200 to-base-300", child: "bg-base-300 border-l-4 border-primary shadow-sm" },
-      { parent: "bg-gradient-to-r from-success/20 to-success/30", child: "bg-success/30 border-l-4 border-success shadow-sm" },
-      { parent: "bg-gradient-to-r from-info/20 to-info/30", child: "bg-info/30 border-l-4 border-info shadow-sm" },
-      { parent: "bg-gradient-to-r from-warning/20 to-warning/30", child: "bg-warning/30 border-l-4 border-warning shadow-sm" },
+      { bg: "bg-linear-to-br from-primary/10 to-primary/5", headerBg: "from-primary/15 to-primary/5", border: "border-l-4 border-primary", badge: "badge-primary" },
+      { bg: "bg-linear-to-br from-success/10 to-success/5", headerBg: "from-success/15 to-success/5", border: "border-l-4 border-success", badge: "badge-success" },
+      { bg: "bg-linear-to-br from-info/10 to-info/5", headerBg: "from-info/15 to-info/5", border: "border-l-4 border-info", badge: "badge-info" },
+      { bg: "bg-linear-to-br from-warning/10 to-warning/5", headerBg: "from-warning/15 to-warning/5", border: "border-l-4 border-warning", badge: "badge-warning" },
     ];
 
-    return cats.flatMap((cat, idx) => {
-      let rowClass = "";
-      let paddingClass = "";
+    return cats.map((cat, idx) => {
+      const colorClass = colorClasses[(colorIndex + idx) % colorClasses.length];
+      const hasChildren = cat.children?.length > 0;
+      const levelLabel = level === 0 ? "Main Category" : level === 1 ? "Subcategory" : "Sub-subcategory";
 
-      if (level === 0) {
-        rowClass = `${colorClasses[(colorIndex + idx) % colorClasses.length].parent} font-bold hover:bg-base-100 transition-colors`;
-        paddingClass = "pl-2 sm:pl-4";
-      } else if (level === 1) {
-        rowClass = `${colorClasses[colorIndex % colorClasses.length].child} hover:bg-base-200 transition-colors`;
-        paddingClass = "pl-6 sm:pl-12";
-      } else {
-        rowClass = "bg-base-100 border-l-4 border-gray-400 shadow-inner hover:bg-base-200 transition-colors";
-        paddingClass = "pl-10 sm:pl-20";
-      }
+      return (
+        <div key={cat._id} className={`${level > 0 ? "ml-4 sm:ml-8" : ""}`}>
+          {/* Collapsible Category Card */}
+          <div className={`border-2 border-base-300 rounded-xl overflow-hidden hover:border-primary/50 transition-all duration-300 shadow-md hover:shadow-lg ${hasChildren ? "" : "mb-4"}`}>
+            <details className="group cursor-pointer">
+              <summary className={`p-4 sm:p-5 bg-linear-to-r ${colorClass.headerBg} hover:from-primary/25 hover:to-primary/15 transition-all flex items-center justify-between group-open:border-b-2 group-open:border-primary/30`}>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <span className={`badge badge-sm ${colorClass.badge} font-semibold`}>{levelLabel}</span>
+                  {hasChildren && <span className="badge badge-sm badge-outline text-xs">{cat.children.length} sub</span>}
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-bold text-sm sm:text-base lg:text-lg text-base-content">{cat.name}</h3>
+                    {cat.description && <p className="text-xs sm:text-xs text-base-content/60 line-clamp-1">{cat.description}</p>}
+                  </div>
+                </div>
+                <ChevronDown size={20} className="transition-transform duration-300 shrink-0 group-open:rotate-180" />
+              </summary>
 
-      const rows = [
-        <tr key={`${cat._id}-${level}`} className={rowClass}><td className={`${paddingClass} text-sm sm:text-base font-medium`}>{cat.name}</td><td className="text-xs sm:text-sm text-gray-600">{cat.description || "-"}</td><td><div className="flex flex-col sm:flex-row gap-1 sm:gap-2"><button className="btn btn-xs btn-primary transition-transform hover:scale-105" onClick={() => { setParentId(cat._id); setModalOpen(true); }}><Plus size={14} className="mr-1" /> Add Sub</button>{!cat.children?.length && <button className="btn btn-xs btn-secondary transition-transform hover:scale-105" onClick={() => handleManageChecklist(cat)}><Edit size={14} className="mr-1" /> Manage</button>}<button className="btn btn-xs btn-error transition-transform hover:scale-105" onClick={() => { setTargetCategory(cat); setDeleteCategoryModalOpen(true); }}><Trash2 size={14} className="mr-1" /> Delete</button></div></td></tr> // ✅ Single-line <tr> with no whitespace
-      ];
+              {/* Card Content - shown when expanded */}
+              <div className="p-4 sm:p-5 bg-base-50 space-y-3">
+                {cat.description && (
+                  <div className="text-sm text-base-content/70 p-3 bg-base-100 rounded-lg border border-base-300">
+                    {cat.description}
+                  </div>
+                )}
 
-      if (cat.children?.length > 0) {
-        rows.push(...renderRows(cat.children, level + 1, level === 0 ? idx : colorIndex));
-      }
+                {/* Action Buttons */}
+                <div className="flex flex-col sm:flex-row gap-2 flex-wrap">
+                  {hasChildren && (
+                    <button
+                      className="btn btn-sm btn-primary gap-2"
+                      onClick={() => { setParentId(cat._id); setModalOpen(true); }}
+                    >
+                      <Plus size={16} /> Add Subcategory
+                    </button>
+                  )}
+                  {!hasChildren && (
+                    <>
+                      <button
+                        className="btn btn-sm btn-primary gap-2"
+                        onClick={() => { setParentId(cat._id); setModalOpen(true); }}
+                      >
+                        <Plus size={16} /> Add Subcategory
+                      </button>
+                      <button
+                        className="btn btn-sm btn-secondary gap-2"
+                        onClick={() => handleManageChecklist(cat)}
+                      >
+                        <FileText size={16} /> Manage Checklist
+                      </button>
+                    </>
+                  )}
+                  <button
+                    className="btn btn-sm btn-error btn-outline gap-2"
+                    onClick={() => { setTargetCategory(cat); setDeleteCategoryModalOpen(true); }}
+                  >
+                    <Trash2 size={16} /> Delete
+                  </button>
+                </div>
 
-      return rows;
+                {/* Subcategories - shown when expanded */}
+                {hasChildren && (
+                  <div className="mt-4 pt-4 border-t border-base-300">
+                    <div className="space-y-3">
+                      {renderCategoryCards(cat.children, level + 1, level === 0 ? idx : colorIndex)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </details>
+          </div>
+        </div>
+      );
     });
   };
 
@@ -508,18 +551,15 @@ const handleSaveAppearanceImages = async () => {
         </button>
       </div>
 
-      {/* ✅ Zebra Table with Responsiveness */}
-      <div className="overflow-x-auto shadow-xl rounded-lg bg-base-100"> {/* ✅ Scrollable on small screens */}
-        <table className="table table-zebra w-full">
-          <thead className="bg-base-200">
-            <tr>
-              <th className="text-sm sm:text-base">Name</th>
-              <th className="text-sm sm:text-base">Description</th>
-              <th className="text-sm sm:text-base">Actions</th>
-            </tr>
-          </thead>
-          <tbody>{renderRows(categories, 0)}</tbody>
-        </table>
+      {/* ✅ Categories Display - Card-Based Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {categories.length > 0 ? (
+          renderCategoryCards(categories, 0)
+        ) : (
+          <div className="col-span-full text-center py-12">
+            <p className="text-base-content/70 text-lg mb-4">No categories yet. Create your first one!</p>
+          </div>
+        )}
       </div>
 
       {/* ✅ Add Category Modal */}
@@ -576,283 +616,279 @@ const handleSaveAppearanceImages = async () => {
 {/* ✅ Enhanced Checklist Modal with Outside Click Close and Visible Close Button */}
 {checklistModalOpen && (
   <div className="modal modal-open">
-    <div className="modal-box max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-4xl shadow-2xl bg-base-100" ref={modalRef}> {/* ✅ Added ref for outside click */}
-      <h3 className="font-bold text-xl sm:text-2xl mb-6 text-primary text-center">
-        Manage Checklist for <span className="text-secondary">{activeCategory?.name}</span>
-      </h3>
-
-      {/* ✅ Enhanced Search Bar - Fixed positioning */}
-      <div className="form-control mb-6">
-        <div className="input-group flex">
-          <input
-            type="text"
-            placeholder="Search items or sections..."
-            className="input input-bordered input-info w-full focus:ring-2 focus:ring-info transition-all"
-            onChange={(e) => {
-              const query = e.target.value.toLowerCase();
-              if (!query) {
-                setFilteredChecklist([]); // reset search
-                return;
-              }
-              const filtered = activeChecklist.filter(
-                (sec) =>
-                  sec.section.toLowerCase().includes(query) ||
-                  sec.items.some((item) =>
-                    item.name.toLowerCase().includes(query)
-                  )
-              );
-              setFilteredChecklist(filtered);
-            }}
-          />
-          <button className="btn btn-square btn-info hover:scale-105 transition-transform">
-            <Search size={16} />
-          </button>
-        </div>
+    <div className="modal-box max-w-xs sm:max-w-lg md:max-w-2xl lg:max-w-4xl shadow-2xl bg-base-100 max-h-[90vh] flex flex-col" ref={modalRef}>
+      {/* Header */}
+      <div className="shrink-0 border-b border-base-300 pb-4 mb-4">
+        <h3 className="font-bold text-2xl sm:text-3xl text-primary mb-2">
+          📋 Checklist for <span className="text-secondary">{activeCategory?.name}</span>
+        </h3>
+        <p className="text-sm text-base-content/70">Manage sections and items for this category's inspection checklist</p>
       </div>
 
-      {/* ✅ New Appearance Images Section */}
-<div className="collapse collapse-arrow border border-base-300 rounded-xl shadow-lg bg-base-100 hover:shadow-xl transition-all duration-300 mb-6">
-  <input type="checkbox" />
-  <div className="collapse-title font-semibold text-base-content text-sm sm:text-base flex items-center py-4 px-6 pr-9">
-    <Image size={16} className="mr-2" /> Appearance Images (Front, Rear, Left, Right)
-  </div>
-  <div className="collapse-content px-6 pb-4">
-    <p className="text-sm text-base-content/70 mb-4">
-      Upload images for each side of the unit. These will be used in the Appearance Checklist for marking defects.
-    </p>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {['front', 'rear', 'left', 'right'].map(side => (
-        <div key={side} className="form-control">
-          <label className="label text-sm font-medium capitalize">{side} Side</label>
-          <input
-            type="file"
-            accept="image/*"
-            className="file-input file-input-bordered file-input-primary w-full"
-            onChange={(e) => handleAppearanceImageChange(side, e)}
-          />
-          {appearanceImagePreviews[side] && (
-            <div className="mt-2 relative">
-              <img src={appearanceImagePreviews[side]} alt={`${side} preview`} className="w-full h-32 object-cover rounded" />
-              <button
-                className="btn btn-xs btn-error absolute top-2 right-2"
-                onClick={() => removeAppearanceImage(side)}
+      {/* Content Area - Scrollable */}
+      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-base-300 scrollbar-track-base-100 pr-2">
+        
+        {/* Search Bar */}
+        <div className="form-control mb-6 sticky top-0 bg-base-100 z-10 py-2">
+          <div className="input-group flex">
+            <input
+              type="text"
+              placeholder="Search items or sections..."
+              className="input input-bordered input-info w-full focus:ring-2 focus:ring-info transition-all"
+              onChange={(e) => {
+                const query = e.target.value.toLowerCase();
+                if (!query) {
+                  setFilteredChecklist([]);
+                  return;
+                }
+                const filtered = activeChecklist.filter(
+                  (sec) =>
+                    sec.section.toLowerCase().includes(query) ||
+                    sec.items.some((item) =>
+                      item.name.toLowerCase().includes(query)
+                    )
+                );
+                setFilteredChecklist(filtered);
+              }}
+            />
+            <button className="btn btn-square btn-info hover:scale-105 transition-transform">
+              <Search size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* Appearance Images Section */}
+        <div className="mb-6 p-4 bg-linear-to-br from-accent/10 to-accent/5 rounded-xl border-2 border-accent/30">
+          <details className="cursor-pointer">
+            <summary className="font-bold text-base text-base-content flex items-center gap-2 hover:text-accent transition-colors">
+              <Image size={18} className="text-accent" /> Appearance Images (Front, Rear, Left, Right)
+            </summary>
+            <div className="mt-4 space-y-4">
+              <p className="text-sm text-base-content/70">
+                Upload reference images for each side of the unit. These images help in marking defects in the appearance checklist.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {['front', 'rear', 'left', 'right'].map(side => (
+                  <div key={side} className="form-control p-3 bg-base-100 rounded-lg">
+                    <label className="label text-sm font-semibold capitalize text-base-content">{side} View</label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="file-input file-input-bordered file-input-primary w-full text-sm"
+                      onChange={(e) => handleAppearanceImageChange(side, e)}
+                    />
+                    {appearanceImagePreviews[side] && (
+                      <div className="mt-2 relative inline-block">
+                        <img src={appearanceImagePreviews[side]} alt={`${side} preview`} className="w-full h-24 object-cover rounded-lg border-2 border-base-300" />
+                        <button
+                          className="btn btn-xs btn-error absolute top-1 right-1"
+                          onClick={() => removeAppearanceImage(side)}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <button
+                  className="btn btn-success btn-sm gap-2"
+                  onClick={handleSaveAppearanceImages}
+                  disabled={savingAppearance}
+                >
+                  {savingAppearance ? (
+                    <>
+                      <div className="loading loading-spinner loading-sm"></div> Saving...
+                    </>
+                  ) : (
+                    <>💾 Save Images</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        {/* Checklist Sections */}
+        <div className="space-y-4">
+          {(filteredChecklist.length ? filteredChecklist : activeChecklist).length > 0 ? (
+            (filteredChecklist.length ? filteredChecklist : activeChecklist).map((section, sectionIndex) => (
+              <div
+                key={section._id}
+                className="border-2 border-base-300 rounded-xl overflow-hidden hover:border-primary/50 transition-all duration-300 shadow-md hover:shadow-lg"
               >
-                <X size={12} />
-              </button>
+                {/* Section Header */}
+                <details className="group cursor-pointer">
+                  <summary className="p-4 sm:p-5 bg-linear-to-r from-primary/15 to-primary/5 hover:from-primary/25 hover:to-primary/15 transition-all flex items-center justify-between group-open:border-b-2 group-open:border-primary/30">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="badge badge-lg badge-primary font-bold">{toRoman(section.order)}</span>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-sm sm:text-base lg:text-lg text-base-content truncate">{section.section}</h4>
+                        <p className="text-xs text-base-content/60">{section.items.length} items</p>
+                      </div>
+                    </div>
+                    <ChevronDown size={20} className="transition-transform duration-300 group-open:rotate-180" />
+                  </summary>
+
+                  {/* Section Items */}
+                  <div className="p-4 sm:p-5 bg-base-50 space-y-3">
+                    {section.items.length > 0 ? (
+                      section.items.filter(item => !item.parentItem).map((item, itemIndex) => (
+                        <div key={item._id} className="space-y-2">
+                          {/* Parent Item */}
+                          <div className="p-3 bg-base-100 border-l-4 border-secondary rounded-lg hover:shadow-md transition-all">
+                            <div className="flex gap-3 items-start">
+                              {item.image && (
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  className="w-14 h-14 object-cover rounded-lg cursor-pointer hover:scale-110 transition-transform shrink-0 border-2 border-base-300"
+                                  onClick={() => handleViewImage(item.image)}
+                                />
+                              )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
+                                    <span className="badge badge-xs sm:badge-sm badge-secondary whitespace-nowrap">{item.type === 'input' ? '🔢 Input' : '✓ Status'}</span>
+                                    <span className="font-semibold text-base-content text-xs sm:text-sm lg:text-base line-clamp-2">{itemIndex + 1}. {item.name}</span>
+                                  </div>
+                                </div>
+                            </div>
+                            <div className="mt-2 sm:mt-3 flex gap-1 sm:gap-2 flex-wrap ml-0 sm:ml-3">
+                              {item.image && (
+                                <button
+                                  className="btn btn-xs gap-0 sm:gap-1"
+                                  onClick={() => handleViewImage(item.image)}
+                                >
+                                  <Eye size={12} /> <span className="hidden sm:inline">View</span>
+                                </button>
+                              )}
+                              <button
+                                className="btn btn-xs btn-warning gap-0 sm:gap-1"
+                                onClick={() => handleEditItem(section._id, item)}
+                              >
+                                <Edit size={12} /> <span className="hidden sm:inline">Edit</span>
+                              </button>
+                              <button
+                                className="btn btn-xs btn-error gap-0 sm:gap-1"
+                                onClick={() => {
+                                  setTargetSection(section._id);
+                                  setTargetItem(item._id);
+                                  setDeleteItemModalOpen(true);
+                                }}
+                              >
+                                <Trash2 size={12} /> <span className="hidden sm:inline">Delete</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Child Items */}
+                          {section.items.filter(sub => sub.parentItem?.toString() === item._id.toString()).length > 0 && (
+                            <div className="ml-6 space-y-2 border-l-4 border-info/50 pl-3">
+                              {section.items
+                                .filter(sub => sub.parentItem?.toString() === item._id.toString())
+                                .map((subItem, subIdx) => (
+                                  <div key={subItem._id} className="p-3 bg-base-200 rounded-lg border-l-4 border-info hover:shadow-md transition-all">
+                                    <div className="flex gap-3 items-start">
+                                      {subItem.image && (
+                                        <img
+                                          src={subItem.image}
+                                          alt={subItem.name}
+                                          className="w-10 h-10 object-cover rounded cursor-pointer hover:scale-110 transition-transform shrink-0 border border-base-300"
+                                          onClick={() => handleViewImage(subItem.image)}
+                                        />
+                                      )}
+                                        <div className="flex-1 min-w-0">
+                                          <div className="flex items-center gap-1">
+                                            <span className="badge badge-xs badge-info text-xs whitespace-nowrap">{subItem.type === 'input' ? '🔢' : '✓'}</span>
+                                            <span className="text-xs sm:text-sm text-base-content truncate">↳ {subItem.name}</span>
+                                          </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 flex gap-1 flex-wrap ml-0 sm:ml-3">
+                                      {subItem.image && (
+                                        <button
+                                          className="btn btn-xs btn-info btn-outline gap-0"
+                                          onClick={() => handleViewImage(subItem.image)}
+                                        >
+                                          <Eye size={10} />
+                                        </button>
+                                      )}
+                                      <button
+                                        className="btn btn-xs btn-warning btn-outline gap-0"
+                                        onClick={() => handleEditItem(section._id, subItem)}
+                                      >
+                                        <Edit size={10} />
+                                      </button>
+                                      <button
+                                        className="btn btn-xs btn-error btn-outline gap-0"
+                                        onClick={() => {
+                                          setTargetSection(section._id);
+                                          setTargetItem(subItem._id);
+                                          setDeleteItemModalOpen(true);
+                                        }}
+                                      >
+                                        <Trash2 size={10} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-center text-base-content/70 py-6 text-sm">No items yet. Add one below! 👇</p>
+                    )}
+
+                    {/* Section Actions */}
+                    <div className="mt-4 pt-4 border-t border-base-300 flex gap-2 flex-wrap justify-end">
+                      <button
+                        className="btn btn-sm btn-error btn-outline gap-2"
+                        onClick={() => {
+                          setTargetSection(section._id);
+                          setDeleteSectionModalOpen(true);
+                        }}
+                      >
+                        <Trash2 size={16} /> Delete Section
+                      </button>
+                      <button
+                        className="btn btn-sm btn-success gap-2"
+                        onClick={() => {
+                          setTargetSection(section._id);
+                          setAddItemModalOpen(true);
+                        }}
+                      >
+                        <Plus size={16} /> Add Item
+                      </button>
+                    </div>
+                  </div>
+                </details>
+              </div>
+            ))
+          ) : (
+            <div className="text-center py-12">
+              <List size={48} className="mx-auto mb-4 text-base-content/30" />
+              <p className="text-base-content/70 text-lg mb-4">No sections found yet</p>
+              <p className="text-sm text-base-content/60">Create your first section to start building the checklist!</p>
             </div>
           )}
         </div>
-      ))}
-    </div>
-    <div className="mt-4 flex justify-end">
-      <button
-  className="btn btn-success btn-sm"
-  onClick={handleSaveAppearanceImages}
-  disabled={savingAppearance}
->
-  {savingAppearance ? (
-    <>
-      <div className="loading loading-spinner loading-sm"></div> Saving...
-    </>
-  ) : (
-    "Save Appearance Images"
-  )}
-</button>
-    </div>
-  </div>
-</div>
-
-      {/* ✅ Enhanced Collapse Accordion */}
-      <div className="space-y-4 max-h-80 sm:max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-base-300 scrollbar-track-base-100">
-        {(filteredChecklist.length ? filteredChecklist : activeChecklist).length > 0 ? (
-          (filteredChecklist.length ? filteredChecklist : activeChecklist).map(
-            (section) => (
-              <div
-                key={section._id}
-                className="collapse collapse-arrow border border-base-300 rounded-xl shadow-lg bg-base-100 hover:shadow-xl transition-all duration-300"
-              >
-                <input type="checkbox" />
-               <div className="collapse-title font-semibold text-base-content text-sm sm:text-base flex items-center py-4 px-6 pr-9"> {/* ✅ Added pr-8 for space from the arrow */}
-  <span className="badge badge-primary mr-3">{toRoman(section.order)}</span>
-  {section.section}
-  <span className="ml-auto text-xs text-base-content/70">({section.items.length} items)</span>
-</div>
-                <div className="collapse-content px-6 pb-4">
-                  {section.items.length > 0 ? (
-                    <ul className="list-none space-y-2">
-                      {section.items
-                        .filter(item => !item.parentItem) // top-level only
-                        .map((item, idx) => (
-<li key={item._id} className="bg-base-200 rounded-lg p-3 shadow-sm">
-    <div className="flex justify-between items-center">
-      <div className="flex items-center gap-3 flex-1 min-w-0">
-        {item.image && (
-          <img
-            src={item.image}
-            alt={item.name}
-            className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewImage(item.image);
-            }}
-          />
-        )}
-        <span className="text-sm sm:text-base font-medium text-base-content truncate">
-          {idx + 1}. {item.name}
-        </span>
-      </div>
-      <div className="flex gap-2 shrink-0">
-        {item.image && (
-          <button
-            className="btn btn-xs btn-info btn-outline hover:btn-solid transition-all hover:scale-105"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleViewImage(item.image);
-            }}
-          >
-            <Eye size={14} />
-          </button>
-        )}
-        <button
-          className="btn btn-xs btn-warning btn-outline hover:btn-solid transition-all hover:scale-105" // ✅ New edit button (btn-xs for consistency)
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            handleEditItem(section._id, item);
-          }}
-        >
-          <Edit size={14} />
-        </button>
-        <button
-          className="btn btn-xs btn-error btn-outline hover:btn-solid transition-all hover:scale-105" // ✅ Changed to btn-xs for consistency
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setTargetSection(section._id);
-            setTargetItem(item._id);
-            setDeleteItemModalOpen(true);
-          }}
-        >
-          <Trash2 size={14} />
-        </button>
-      </div>
-    </div>
-
-    {/* Sub-items with better indentation */}
-{section.items.filter(sub => sub.parentItem?.toString() === item._id.toString()).length > 0 && (
-  <ul className="list-none ml-6 mt-2 space-y-1 border-l-2 border-info pl-4">
-    {section.items
-      .filter(sub => sub.parentItem?.toString() === item._id.toString())
-      .map(sub => (
-        <li key={sub._id} className="flex justify-between items-center bg-base-300 rounded p-2 text-xs sm:text-sm text-base-content/80">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            {sub.image && (
-              <img
-                src={sub.image}
-                alt={sub.name}
-                className="w-8 h-8 object-cover rounded cursor-pointer hover:scale-105 transition-transform shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleViewImage(sub.image);
-                }}
-              />
-            )}
-            <span className="truncate">- {sub.name}</span>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            {sub.image && (
-              <button
-                className="btn btn-xs btn-info btn-outline hover:btn-solid transition-all hover:scale-105"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleViewImage(sub.image);
-                }}
-              >
-                <Eye size={12} />
-              </button>
-            )}
-            <button
-              className="btn btn-xs btn-warning btn-outline hover:btn-solid transition-all hover:scale-105"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleEditItem(section._id, sub); // ✅ Now allows editing sub-items
-              }}
-            >
-              <Edit size={12} />
-            </button>
-            <button
-              className="btn btn-xs btn-error btn-outline hover:btn-solid transition-all hover:scale-105 shrink-0"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setTargetSection(section._id);
-                setTargetItem(sub._id);
-                setDeleteItemModalOpen(true);
-              }}
-            >
-              <Trash2 size={12} />
-            </button>
-          </div>
-        </li>
-      ))}
-  </ul>
-)}
-  </li>
-
-                        ))}
-                    </ul>
-                  ) : (
-                    <p className="text-center text-base-content/70 py-4">No items in this section yet.</p>
-                  )}
-                  <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-end">
-                    <button
-                      className="btn btn-sm btn-error btn-outline hover:btn-solid transition-all hover:scale-105"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setTargetSection(section._id);
-                        setDeleteSectionModalOpen(true);
-                      }}
-                    >
-                      <Trash2 size={16} className="mr-2" /> Delete Section
-                    </button>
-                    <button
-                      className="btn btn-sm btn-success btn-outline hover:btn-solid transition-all hover:scale-105"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setTargetSection(section._id);
-                        setAddItemModalOpen(true);
-                      }}
-                    >
-                      <Plus size={16} className="mr-2" /> Add Item
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )
-          )
-        ) : (
-          <div className="text-center py-8">
-            <p className="text-base-content/70 text-lg">No sections found. Add one below!</p>
-          </div>
-        )}
       </div>
 
-      <div className="mt-6 flex justify-center">
+      {/* Footer */}
+      <div className="shrink-0 border-t border-base-300 mt-6 pt-4 flex justify-between items-center gap-4">
         <button
-          className="btn btn-lg btn-success shadow-lg hover:shadow-xl transition-all hover:scale-105"
+          className="btn btn-lg btn-success shadow-lg hover:shadow-xl transition-all gap-2"
           onClick={() => setAddSectionModalOpen(true)}
         >
-          <Plus size={18} className="mr-2" /> Add New Section
+          <Plus size={18} /> Add Section
         </button>
-      </div>
-
-      <div className="modal-action mt-6 justify-end">
-                <button
-          className="btn btn-neutral hover:btn-solid transition-all hover:scale-105" // ✅ Removed outline for better visibility in dark theme
+        <button
+          className="btn btn-neutral hover:btn-solid transition-all"
           onClick={() => {
             setChecklistModalOpen(false);
-            setFilteredChecklist([]); // reset search when closing
+            setFilteredChecklist([]);
           }}
         >
           Close
@@ -1088,12 +1124,12 @@ const handleSaveAppearanceImages = async () => {
                 return null;
               })()}
 
-              {/* Image upload section - NEW */}
+             {/* Image upload section - NEW */}
 <div className="form-control mb-4">
   <label className="label text-sm sm:text-base">Reference Image (optional)</label>
   <input
     type="file"
-    accept="image/*"
+    accept="image/*" // ✅ Changed to accept all images
     className="file-input file-input-bordered file-input-primary w-full"
     onChange={handleImageChange}
   />
@@ -1108,7 +1144,8 @@ const handleSaveAppearanceImages = async () => {
       </button>
     </div>
   )}
-  <p className="text-xs text-base-content/70 mt-1">Max 5MB, JPG/PNG/GIF only.</p>
+  {/* ✅ Updated text to reflect new limit */}
+  <p className="text-xs text-base-content/70 mt-1">Max 20MB, Any Image Format.</p>
 </div>
 
               <div className="modal-action">
@@ -1256,38 +1293,39 @@ const handleSaveAppearanceImages = async () => {
           return null;
         })()}
 
-        {/* Image upload section */}
-        <div className="form-control mb-4">
-          <label className="label text-sm sm:text-base">Reference Image (optional)</label>
-          <input
-            type="file"
-            accept="image/*"
-            className="file-input file-input-bordered file-input-primary w-full"
-            onChange={handleEditImageChange}
-          />
-          {editImagePreview && (
-            <div className="mt-2 relative">
-              <img src={editImagePreview} alt="Preview" className="w-20 h-20 object-cover rounded" />
-              <button
-                className="btn btn-xs btn-error absolute top-0 right-0"
-                onClick={removeEditImage}
-              >
-                <X size={12} />
-              </button>
-            </div>
-          )}
-          {editingItem.image && !editImagePreview && (
-            <div className="mt-2">
-              <label className="label text-sm sm:text-base">Current Image</label>
-              <img
-                src={editingItem.image}
-                alt="Current"
-                className="w-20 h-20 object-cover rounded"
-              />
-            </div>
-          )}
-          <p className="text-xs text-base-content/70 mt-1">Max 5MB, JPG/PNG/GIF only.</p>
-        </div>
+       {/* Image upload section */}
+<div className="form-control mb-4">
+  <label className="label text-sm sm:text-base">Reference Image (optional)</label>
+  <input
+    type="file"
+    accept="image/*" // ✅ Changed to accept all images
+    className="file-input file-input-bordered file-input-primary w-full"
+    onChange={handleEditImageChange}
+  />
+  {editImagePreview && (
+    <div className="mt-2 relative">
+      <img src={editImagePreview} alt="Preview" className="w-20 h-20 object-cover rounded" />
+      <button
+        className="btn btn-xs btn-error absolute top-0 right-0"
+        onClick={removeEditImage}
+      >
+        <X size={12} />
+      </button>
+    </div>
+  )}
+  {editingItem.image && !editImagePreview && (
+    <div className="mt-2">
+      <label className="label text-sm sm:text-base">Current Image</label>
+      <img
+        src={editingItem.image}
+        alt="Current"
+        className="w-20 h-20 object-cover rounded"
+      />
+    </div>
+  )}
+  {/* ✅ Updated text to reflect new limit */}
+  <p className="text-xs text-base-content/70 mt-1">Max 20MB, Any Image Format.</p>
+</div>
 
         <div className="modal-action">
           <button type="submit" className="btn btn-primary transition-transform hover:scale-105" disabled={savingEditItem}>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { toast } from "react-hot-toast";
+import { ChevronDown, FileText, List } from "lucide-react";
 
 
 
@@ -152,6 +153,15 @@ const ChecklistWizard = ({
     return saved ? JSON.parse(saved) : (technicalData || {});
   });
 
+  const [validationError, setValidationError] = useState(null);
+
+  // close details when clicking inside content (not on summary)
+  const handleDetailsClick = (e) => {
+    const details = e.currentTarget;
+    if (e.target.closest("summary")) return; // ignore clicks on summary itself
+    details.open = false;
+  };
+
   // ✅ Persist special data to job-specific localStorage on change
   useEffect(() => {
     if (job?._id) {
@@ -209,7 +219,7 @@ const ChecklistWizard = ({
           ? {
               ...itm,
               status: value,
-              remarks: value === "good" || value === "na" ? "" : itm.remarks,
+              remarks: itm.remarks, 
             }
           : itm
       ),
@@ -217,6 +227,13 @@ const ChecklistWizard = ({
     onChange(updated);
   };
 
+
+   // ✅ ADD THIS useEffect
+useEffect(() => {
+  if (checklist && checklist.length > 0) {
+    validateChecklist();
+  }
+}, [checklist]);
   // Update remarks (preserves parentItem and code)
   const updateRemarks = (sectionIdx, itemIdx, value) => {
     const updated = [...checklist];
@@ -228,6 +245,8 @@ const ChecklistWizard = ({
     };
     onChange(updated);
   };
+
+   
 
   // Update value for input-type items (dynamic name: value if entered, else original name)
   const updateValue = (sectionIdx, itemIdx, value) => {
@@ -242,6 +261,29 @@ const ChecklistWizard = ({
     onChange(updated);
   };
 
+  // ✅ ADD THIS FUNCTION HERE
+const validateChecklist = () => {
+  let hasError = false;
+  let errorMessage = "";
+
+  checklist.forEach((section, sectionIdx) => {
+    section.items.forEach((item, itemIdx) => {
+      if (item.status === "noGood" && (!item.remarks || item.remarks.trim() === "")) {
+        hasError = true;
+        errorMessage = `Section "${section.section}" - Item "${item.name}" requires remarks for "No Good" status.`;
+      }
+    });
+  });
+
+  if (hasError) {
+    setValidationError(errorMessage);
+    return false;
+  }
+
+  setValidationError(null);
+  return true;
+};
+
   // ✅ New function to open image preview
   const openImagePreview = (imageUrl) => {
     setPreviewImageUrl(imageUrl);
@@ -250,8 +292,8 @@ const ChecklistWizard = ({
 
   if (!checklist || checklist.length === 0) {
     return (
-      <div className="card bg-base-200 shadow-md p-4 md:p-6 w-full">
-        <p className="text-center text-gray-500">No checklist available.</p>
+      <div className="bg-linear-to-br from-base-100 to-base-200 border-2 border-base-300 shadow-xl rounded-xl p-4 sm:p-6 lg:p-8 w-full">
+        <p className="text-center text-base-content/70 text-sm sm:text-base">No checklist available.</p>
       </div>
     );
   }
@@ -259,51 +301,61 @@ const ChecklistWizard = ({
   const section = checklist[currentSection] || { section: "No section", items: [] };
 
   return (
-   <div className="card bg-base-200 shadow-md p-4 md:p-6 w-full">
-      <h4 className="text-lg font-semibold mb-4">Job Checklist</h4>
+   <div className="bg-linear-to-br from-base-100 to-base-200 border-2 border-base-300 shadow-xl rounded-xl overflow-hidden">
+      <div className="bg-linear-to-r from-primary/15 to-primary/5 p-4 sm:p-6 border-b-2 border-primary/20">
+        <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary flex items-center gap-3 mb-1">
+          <List size={28} /> Job Checklist
+        </h3>
+        <p className="text-sm text-base-content/70">Complete all sections and special checklists before saving</p>
+      </div>
 
-      {/* Legend for Normal Checklist */}
+      <div className="p-4 sm:p-6 lg:p-8 space-y-4">
+      {/* Legend for Normal Checklist always visible */}
       {specialStep === 0 && (
-        <div className="mb-4 p-3 bg-base-100 rounded-lg">
-  <h6 className="text-sm font-semibold mb-2">Legend:</h6>
-  <div className="flex flex-wrap gap-3 md:gap-6 text-sm">
-            <span>⭕ Good</span>
-            <span>❌ No Good</span>
-            <span>ⓧ Corrected</span>
-            <span>🚫 N/A</span>
+        <div className="mb-4 p-4 bg-base-100 rounded-lg border-2 border-primary/30">
+          <h6 className="text-sm font-semibold mb-2">Status Legend</h6>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+            <div className="flex items-center gap-2 p-2 bg-success/10 rounded-lg"><span>⭕</span> <span className="font-medium">Good</span></div>
+            <div className="flex items-center gap-2 p-2 bg-error/10 rounded-lg"><span>❌</span> <span className="font-medium">No Good</span></div>
+            <div className="flex items-center gap-2 p-2 bg-warning/10 rounded-lg"><span>ⓧ</span> <span className="font-medium">Corrected</span></div>
+            <div className="flex items-center gap-2 p-2 bg-info/10 rounded-lg"><span>🚫</span> <span className="font-medium">N/A</span></div>
           </div>
         </div>
       )}
 
       {/* ✅ Conditional header based on step */}
       {specialStep === 0 ? (
-       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-2">
-  <h5 className="font-bold text-lg">Section: {section.section}</h5>
-</div>
+        <div className="bg-linear-to-r from-secondary/15 to-secondary/5 p-4 sm:p-5 rounded-lg border-l-4 border-secondary mb-4">
+          <h4 className="text-lg sm:text-xl lg:text-2xl font-bold text-secondary flex items-center gap-2 mb-1">
+            <FileText size={24} /> {section.section}
+          </h4>
+          <p className="text-xs sm:text-sm text-base-content/70">Section {currentSection + 1} of {checklist.length}</p>
+        </div>
       ) : (
-        <div className="flex items-center justify-between mb-2">
-          <h5 className="font-bold">
-            Special Checklist {specialStep}: {
-              specialStep === 1 ? "Appearance" :
-              specialStep === 2 ? "Summary" :
-              "Technical"
-            }
-          </h5>
+        <div className="bg-linear-to-r from-warning/15 to-warning/5 p-4 sm:p-5 rounded-lg border-l-4 border-warning mb-4">
+          <h4 className="text-lg sm:text-xl lg:text-2xl font-bold text-warning flex items-center gap-2 mb-1">
+            <FileText size={24} /> Special Checklist {specialStep}
+          </h4>
+          <p className="text-xs sm:text-sm text-base-content/70">{
+            specialStep === 1 ? "Mark defects on vehicle appearance images" :
+            specialStep === 2 ? "Document all encountered defects" :
+            "Record technical test measurements"
+          }</p>
         </div>
       )}
 
       {/* ✅ Conditional rendering for normal vs. special checklists */}
       {specialStep === 0 ? (
-        // Normal checklist table
+        // Normal checklist table with responsive design
         <>
-          <div className="overflow-x-auto">
-  <table className="table w-full border min-w-150">
+          <div className="overflow-x-auto rounded-xl border-2 border-base-300 bg-base-100">
+  <table className="table w-full">
             <thead>
-              <tr>
-                <th className="text-center">Reference</th>
-                <th className="text-center">Item Name</th>
-                <th className="text-center">Status</th>
-                <th className="text-center">Remarks</th>
+              <tr className="bg-linear-to-r from-primary/15 to-primary/5 border-b-2 border-primary/30">
+                <th className="text-center text-sm sm:text-base font-bold text-primary">Reference</th>
+                <th className="text-center text-sm sm:text-base font-bold text-primary">Item Name</th>
+                <th className="text-center text-sm sm:text-base font-bold text-primary">Status</th>
+                <th className="text-center text-sm sm:text-base font-bold text-primary">Remarks</th>
               </tr>
             </thead>
             <tbody>
@@ -315,94 +367,106 @@ const ChecklistWizard = ({
                   na: "🚫",
                 };
                 return (
-                  <tr key={item._id || idx}>
-                    <td className="text-center">
+                  <tr key={item._id || idx} className="hover:bg-base-200 transition-colors border-b border-base-300">
+                    <td className="text-center p-3 sm:p-4">
                       {item.image ? (
                         <img
                           src={item.image}
                           alt={item.name}
-                          className="w-12 h-12 object-cover rounded cursor-pointer hover:scale-105 transition-transform mx-auto"
+                          className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded cursor-pointer hover:scale-110 transition-transform mx-auto border border-base-300"
                           onClick={() => openImagePreview(item.image)}
                         />
                       ) : (
-                        <span className="text-gray-400 text-sm">No Image</span>
+                        <span className="text-base-content/40 text-xs sm:text-sm">No Image</span>
                       )}
                     </td>
-                    <td className="text-center">
+                    <td className="text-center p-3 sm:p-4">
                       {item.type === "input" ? (
                         <input
                           type="text"
-                          placeholder="Enter serial number"
+                          placeholder="Enter serial"
                           value={item.value || ""}
                           onChange={(e) => updateValue(currentSection, idx, e.target.value)}
-                          className="input input-bordered w-full"
+                          className="input input-sm input-bordered w-full focus:ring-2 focus:ring-primary transition-all"
                         />
                       ) : (
-                        item.name
+                        <span className="font-medium text-sm sm:text-base">{item.name}</span>
                       )}
                     </td>
-                    <td className="text-center">
-                      <div className="flex items-center justify-center space-x-2">
-                        <span className="text-lg font-semibold">
+                    <td className="text-center p-3 sm:p-4">
+                      <div className="flex items-center justify-center flex-col gap-1">
+                        <span className="text-xl sm:text-2xl font-semibold" title="Current status">
                           {statusSymbols[item.status] || "ℹ️"}
                         </span>
-                        <div className="flex space-x-1">
+                        <div className="flex flex-wrap gap-1 justify-center">
                           <button
-                            className={`btn btn-xs ${item.status === "good" ? "btn-success" : "btn-outline"}`}
+                            className={`btn btn-xs transition-all ${
+                              item.status === "good"
+                                ? "btn-success"
+                                : "btn-outline btn-sm hover:btn-success"
+                            }`}
                             onClick={() => updateStatus(currentSection, idx, "good")}
+                            title="Mark as Good"
                           >
                             ⭕
                           </button>
                           <button
-                            className={`btn btn-xs ${item.status === "noGood" ? "btn-error" : "btn-outline"}`}
+                            className={`btn btn-xs transition-all ${
+                              item.status === "noGood"
+                                ? "btn-error"
+                                : "btn-outline btn-sm hover:btn-error"
+                            }`}
                             onClick={() => updateStatus(currentSection, idx, "noGood")}
+                            title="Mark as No Good"
                           >
                             ❌
                           </button>
                           <button
-                            className={`btn btn-xs ${item.status === "corrected" ? "btn-warning" : "btn-outline"}`}
+                            className={`btn btn-xs transition-all ${
+                              item.status === "corrected"
+                                ? "btn-warning"
+                                : "btn-outline btn-sm hover:btn-warning"
+                            }`}
                             onClick={() => updateStatus(currentSection, idx, "corrected")}
+                            title="Mark as Corrected"
                           >
                             ⓧ
                           </button>
                           <button
-                            className={`btn btn-xs ${item.status === "na" ? "btn-info" : "btn-outline"}`}
+                            className={`btn btn-xs transition-all ${
+                              item.status === "na"
+                                ? "btn-info"
+                                : "btn-outline btn-sm hover:btn-info"
+                            }`}
                             onClick={() => updateStatus(currentSection, idx, "na")}
+                            title="Mark as N/A"
                           >
                             🚫
                           </button>
                         </div>
                       </div>
                     </td>
-                    <td className="text-center">
-                      {item.status === "noGood" ? (
-                        <input
-                          type="text"
-                          placeholder="Remarks (required)"
-                          value={item.remarks || ""}
-                          onChange={(e) => updateRemarks(currentSection, idx, e.target.value)}
-                          className="input input-bordered w-full border-red-500"
-                          required
-                        />
-                      ) : item.status === "corrected" ? (
-                        <input
-                          type="text"
-                          placeholder="Remarks (optional)"
-                          value={item.remarks || ""}
-                          onChange={(e) => updateRemarks(currentSection, idx, e.target.value)}
-                          className="input input-bordered w-full"
-                        />
-                      ) : (
-                        <span className="text-gray-400">N/A</span>
-                      )}
-                    </td>
+                    <td className="text-center p-3 sm:p-4">
+  <input
+    type="text"
+    placeholder={`${item.status === "noGood" ? "Required" : "Optional"}`}
+    value={item.remarks || ""}
+    onChange={(e) => updateRemarks(currentSection, idx, e.target.value)}
+    className={`input input-sm input-bordered w-full focus:ring-2 transition-all ${
+  item.status === "noGood" && (!item.remarks || item.remarks.trim() === "")
+    ? "border-red-500 focus:ring-red-500"
+    : ""
+}`}
+    required={item.status === "noGood"}
+  />
+</td>
                   </tr>
                 );
               })}
               {section.items.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="text-center text-gray-500">
-                    No items in this section
+                  <td colSpan="4" className="text-center text-base-content/70 p-6 font-medium">
+                    📭 No items in this section
                   </td>
                 </tr>
               )}
@@ -435,7 +499,7 @@ const ChecklistWizard = ({
       )}
 
       {/* Navigation - ✅ Updated for special steps */}
-      <div className="flex flex-col sm:flex-row justify-between mt-6 gap-3">
+      <div className="flex flex-col sm:flex-row justify-between mt-8 gap-3 pt-6 border-t-2 border-base-300">
         {(currentSection > 0 && specialStep === 0) && (
           <button
             className="btn btn-secondary"
@@ -452,49 +516,81 @@ const ChecklistWizard = ({
             Back to Previous Special
           </button>
         )}
-        {currentSection < checklist.length - 1 && specialStep === 0 ? (
-          <button
-            className="btn btn-primary ml-auto"
-            onClick={() => setCurrentSection(currentSection + 1)}
-          >
-            Next
-          </button>
-        ) : specialStep === 0 ? (
-          <button
-            className="btn btn-warning ml-auto"
-            onClick={() => setSpecialStep(1)}
-          >
-            Start Special Checklists
-          </button>
-        ) : specialStep < 3 ? (
-          <button
-            className="btn btn-primary ml-auto"
-            onClick={() => setSpecialStep(specialStep + 1)}
-          >
-            Next Special
-          </button>
-        ) : null}
+       {currentSection < checklist.length - 1 && specialStep === 0 ? (
+  <button
+    className="btn btn-primary ml-auto gap-2"
+    onClick={() => {
+      if (validateChecklist()) {
+        setCurrentSection(currentSection + 1);
+      }
+    }}
+    disabled={validationError !== null}
+  >
+    Next Section →
+  </button>
+) : specialStep === 0 ? (
+  <button
+    className="btn btn-warning ml-auto gap-2"
+    onClick={() => {
+      if (validateChecklist()) {
+        setSpecialStep(1);
+      }
+    }}
+    disabled={validationError !== null}
+  >
+    Start Special Checklists
+  </button>
+) : specialStep < 3 ? (
+  <button
+    className="btn btn-primary ml-auto gap-2"
+    onClick={() => {
+      if (validateChecklist()) {
+        setSpecialStep(specialStep + 1);
+      }
+    }}
+    disabled={validationError !== null}
+  >
+    Next Checklist →
+  </button>
+) : null}
       </div>
+
+      {/* ✅ ADD THIS ERROR MESSAGE DISPLAY HERE */}
+{validationError && (
+  <div className="alert alert-error text-sm mt-4 shadow-md border-2 border-error/50">
+    <div className="flex items-center gap-2">
+      <span className="text-lg">⚠️</span>
+      <span className="font-medium">{validationError}</span>
+    </div>
+  </div>
+)}
+
+
 
       {/* Preview modal - ✅ Full details of all checklists */}
       {previewOpen && job && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-base-100 rounded-lg shadow-xl w-full max-w-5xl h-[90vh] flex flex-col max-h-[95vh] md:max-h-[90vh]">
-            <div className="border-b border-base-300 px-6 py-4 sticky top-0 bg-base-100 z-10">
-              <h3 className="text-xl font-semibold text-primary">Full Checklist Preview</h3>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-linear-to-br from-base-100 to-base-200 rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col max-h-[95vh] md:max-h-[90vh] border-2 border-base-300">
+            <div className="bg-linear-to-r from-primary/15 to-primary/5 border-b-2 border-primary/30 px-4 sm:px-6 py-4 sticky top-0 z-10">
+              <h3 className="text-xl sm:text-2xl font-bold text-primary flex items-center gap-2 mb-1">✔️ Final Review</h3>
               <p className="text-sm text-base-content/70">
                 Review all sections and special checklists before finalizing
               </p>
             </div>
 
-            <div className="px-4 md:px-6 py-4 overflow-y-auto flex-1 space-y-6">
+            <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1 space-y-4">
               {/* Normal checklist sections - Full details */}
-              {checklist.map((sec) => (
-                <div
-                  key={sec._id || sec.section}
-                  className="border border-base-300 rounded-lg p-4 shadow-sm bg-base-200"
-                >
-                  <h4 className="text-lg font-bold text-secondary mb-3 border-b border-base-300 pb-1">
+              {checklist.map((sec, idx) => (
+                <details onClick={handleDetailsClick} key={sec._id || sec.section} className="group cursor-pointer border-2 border-secondary/30 rounded-xl overflow-hidden hover:border-secondary/50 transition-all">
+                  <summary className="p-4 sm:p-5 bg-linear-to-r from-secondary/15 to-secondary/5 hover:from-secondary/25 hover:to-secondary/15 transition-all flex items-center justify-between group-open:border-b-2 group-open:border-secondary/30 font-semibold">
+                    <div className="flex items-center gap-2">
+                      <span className="badge badge-lg badge-secondary font-bold text-white">{idx + 1}</span>
+                      <span className="text-base sm:text-lg text-secondary">{sec.section}</span>
+                    </div>
+                    <ChevronDown size={20} className="transition-transform duration-300 group-open:rotate-180" />
+                  </summary>
+                  <div className="p-4 sm:p-5 bg-base-100">
+                  <h4 className="text-lg font-bold text-secondary mb-3 pb-2">
                     {sec.section}
                   </h4>
                   <ul className="space-y-2">
@@ -540,16 +636,22 @@ const ChecklistWizard = ({
                       })}
                   </ul>
                   {sec.items.filter((item) => !(item.type === "input" && !item.value)).length === 0 && (
-                    <p className="text-center text-base-content/70 py-4">No applicable items in this section.</p>
+                    <p className="text-center text-base-content/70 py-4 italic">No applicable items in this section.</p>
                   )}
-                </div>
+                  </div>
+                </details>
               ))}
 
              {/* ✅ Enhanced: Appearance with canvas-overlaid marks (like AppearanceChecklist) */}
-<div className="border border-base-300 rounded-lg p-4 shadow-sm bg-base-200">
-  <h4 className="text-lg font-bold text-warning mb-3 border-b border-base-300 pb-1">
-    Appearance Checklist Details
-  </h4>
+<details onClick={handleDetailsClick} className="group cursor-pointer border-2 border-warning/30 rounded-xl overflow-hidden hover:border-warning/50 transition-all">
+  <summary className="p-4 sm:p-5 bg-linear-to-r from-warning/15 to-warning/5 hover:from-warning/25 hover:to-warning/15 transition-all flex items-center justify-between group-open:border-b-2 group-open:border-warning/30 font-semibold">
+    <div className="flex items-center gap-2">
+      <span className="badge badge-lg badge-warning font-bold text-white">A</span>
+      <span className="text-base sm:text-lg text-warning">Appearance Checklist</span>
+    </div>
+    <ChevronDown size={20} className="transition-transform duration-300 group-open:rotate-180" />
+  </summary>
+  <div className="p-4 sm:p-5 bg-base-100 space-y-4">
   {localAppearanceData.length > 0 ? (
     <div className="space-y-4">
       {/* Display marks grouped by side with canvas overlay */}
@@ -567,16 +669,23 @@ const ChecklistWizard = ({
       })}
     </div>
   ) : (
-    <p className="text-base-content/70">No defects marked.</p>
+    <p className="text-base-content/70 italic text-center py-4">No defects marked.</p>
   )}
-</div>
+  </div>
+</details>
 
               {/* ✅ Summary in table format (already is) */}
-              <div className="border border-base-300 rounded-lg p-4 shadow-sm bg-base-200">
-                <h4 className="text-lg font-bold text-info mb-3 border-b border-base-300 pb-1">
-                  Summary Checklist Details
-                </h4>
+              <details onClick={handleDetailsClick} className="group cursor-pointer border-2 border-info/30 rounded-xl overflow-hidden hover:border-info/50 transition-all">
+                <summary className="p-4 sm:p-5 bg-linear-to-r from-info/15 to-info/5 hover:from-info/25 hover:to-info/15 transition-all flex items-center justify-between group-open:border-b-2 group-open:border-info/30 font-semibold">
+                  <div className="flex items-center gap-2">
+                    <span className="badge badge-lg badge-info font-bold text-white">S</span>
+                    <span className="text-base sm:text-lg text-info">Summary Checklist</span>
+                  </div>
+                  <ChevronDown size={20} className="transition-transform duration-300 group-open:rotate-180" />
+                </summary>
+                <div className="p-4 sm:p-5 bg-base-100">
                 {localSummaryData.length > 0 ? (
+                  <div className="overflow-x-auto rounded-lg border border-base-300 bg-base-100">
                   <table className="table w-full">
                     <thead>
                       <tr>
@@ -611,16 +720,23 @@ const ChecklistWizard = ({
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 ) : (
-                  <p className="text-base-content/70">No defects listed.</p>
+                  <p className="text-base-content/70 italic text-center py-4">No defects listed.</p>
                 )}
-              </div>
+                </div>
+              </details>
 
               {/* ✅ Enhanced: Technical in card-based layout */}
-<div className="border border-base-300 rounded-lg p-4 shadow-sm bg-base-200">
-  <h4 className="text-lg font-bold text-success mb-3 border-b border-base-300 pb-1">
-    Technical Checklist Details
-  </h4>
+<details onClick={handleDetailsClick} className="group cursor-pointer border-2 border-success/30 rounded-xl overflow-hidden hover:border-success/50 transition-all">
+  <summary className="p-4 sm:p-5 bg-linear-to-r from-success/15 to-success/5 hover:from-success/25 hover:to-success/15 transition-all flex items-center justify-between group-open:border-b-2 group-open:border-success/30 font-semibold">
+    <div className="flex items-center gap-2">
+      <span className="badge badge-lg badge-success font-bold text-white">T</span>
+      <span className="text-base sm:text-lg text-success">Technical Checklist</span>
+    </div>
+    <ChevronDown size={20} className="transition-transform duration-300 group-open:rotate-180" />
+  </summary>
+  <div className="p-4 sm:p-5 bg-base-100">
   {Object.keys(localTechnicalData).length > 0 ? (
     <div className="space-y-4">
       {/* Breaking Force */}
@@ -770,21 +886,22 @@ const ChecklistWizard = ({
       )}
     </div>
   ) : (
-    <p className="text-base-content/70">No tests completed.</p>
+    <p className="text-base-content/70 italic text-center py-4">No tests completed.</p>
   )}
-</div>
+  </div>
+</details>
             </div>
 
-            <div className="flex justify-end space-x-2 border-t border-base-300 px-6 py-3 bg-base-200 sticky bottom-0 z-10">
+            <div className="flex justify-end gap-3 border-t-2 border-base-300 px-4 sm:px-6 py-4 bg-linear-to-r from-base-200 to-base-100 sticky bottom-0 z-10">
               <button
-                className="btn btn-sm btn-neutral"
+                className="btn btn-sm btn-neutral gap-2"
                 onClick={() => setPreviewOpen(false)}
                 disabled={saving}
               >
-                Back
+                ← Back
               </button>
               <button
-                className="btn btn-sm btn-success"
+                className="btn btn-sm btn-success gap-2 shadow-lg"
                 disabled={saving}
                 onClick={async () => {
                   try {
@@ -811,7 +928,14 @@ const ChecklistWizard = ({
                   }
                 }}
               >
-                {saving ? "Saving..." : "Confirm & Save All"}
+                {saving ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    Saving...
+                  </>
+                ) : (
+                  "✔️ Confirm & Save"
+                )}
               </button>
             </div>
           </div>
@@ -820,23 +944,24 @@ const ChecklistWizard = ({
 
       {/* ✅ Image Preview Modal */}
       {imagePreviewOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-base-100 rounded-lg shadow-xl max-w-4xl max-h-[90vh] p-4 relative">
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-base-100 rounded-xl shadow-2xl max-w-4xl max-h-[90vh] p-4 sm:p-6 relative border-2 border-base-300">
             <button
-              className="btn btn-sm btn-circle btn-error absolute top-2 right-2"
+              className="btn btn-sm btn-circle btn-error absolute top-3 sm:top-4 right-3 sm:right-4 shadow-lg"
               onClick={() => setImagePreviewOpen(false)}
             >
               ✕
             </button>
-            <h3 className="text-lg font-semibold mb-4 text-center">Image Preview</h3>
+            <h3 className="text-lg sm:text-xl font-bold mb-4 text-center text-primary">🖼️ Image Preview</h3>
             <img
               src={previewImageUrl}
               alt="Preview"
-              className="w-full h-auto max-h-[70vh] object-contain rounded"
+              className="w-full h-auto max-h-[70vh] object-contain rounded-lg border border-base-300"
             />
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

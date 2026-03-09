@@ -4,7 +4,7 @@ import JobEditModal from "../components/JobEditModal";
 import ChecklistWizard from "../components/ChecklistWizard";
 import { useNavigate } from "react-router-dom";
 import toast, { Toaster } from "react-hot-toast";
-import { FolderOpen, ClipboardList, Search, Calendar, ArrowLeft, Save, Edit, Trash2 } from "lucide-react"; // ✅ Added more icons for visuals
+import { FolderOpen, ClipboardList, Search, Calendar, ArrowLeft, Save, Edit, Trash2, ChevronDown, Package, Briefcase } from "lucide-react"; // ✅ Added more icons for visuals
 
 export default function Checklist() {
   const [categories, setCategories] = useState([]);
@@ -187,14 +187,17 @@ export default function Checklist() {
   const [savingJob, setSavingJob] = useState(false); // ✅ New state for saving indicator
 
   const renderJobForm = (cat) => (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8"> {/* ✅ Responsive padding */}
-      {/* Enhanced DaisyUI card */}
-      <div className="card bg-linear-to-br from-base-200 to-base-300 shadow-2xl rounded-xl"> {/* ✅ Gradient and shadow */}
-        <div className="card-body p-6 sm:p-8">
-          <h4 className="card-title text-xl sm:text-2xl font-bold mb-6 text-primary flex items-center gap-2">
-            <ClipboardList size={24} /> Job Information
+    <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+      {/* Enhanced Card with better styling */}
+      <div className="bg-linear-to-br from-base-100 to-base-200 border-2 border-base-300 shadow-xl rounded-xl overflow-hidden">
+        <div className="bg-linear-to-r from-primary/15 to-primary/5 p-6 sm:p-8 border-b-2 border-primary/20">
+          <h4 className="text-2xl sm:text-3xl font-bold text-primary flex items-center gap-3 mb-2">
+            <Briefcase size={28} /> Job Information
           </h4>
+          <p className="text-sm text-base-content/70">Create a new job record for {cat.name}</p>
+        </div>
 
+        <div className="p-6 sm:p-8">
           <form
             className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6"
             onSubmit={async (e) => {
@@ -218,23 +221,21 @@ export default function Checklist() {
                 return;
               }
 
-              setSavingJob(true); // ✅ Start saving state
+              setSavingJob(true);
 
               try {
-                // ✅ Artificial delay so "Saving job..." toast is visible (no actual DB save here)
                 await new Promise((r) => setTimeout(r, 1000));
 
-                // Create temporary job object (unsaved) with jobInfo and initialized checklist
                 const tempJob = {
-                  _id: `temp-${Date.now()}`, // Temporary ID for local use
-                  category: selected, // Include category for reference
+                  _id: `temp-${Date.now()}`,
+                  category: selected,
                   jobInfo,
-                  checklist: initializeChecklist(checklist), // Use the category's checklist template
+                  checklist: initializeChecklist(checklist),
                 };
 
                 setCurrentJob(tempJob);
                 setShowChecklist(true);
-                setJobSaved(false); // Not saved yet
+                setJobSaved(false);
 
                 localStorage.setItem("currentJob", JSON.stringify(tempJob));
                 localStorage.setItem("showChecklist", "true");
@@ -244,13 +245,13 @@ export default function Checklist() {
                 toast.error("Unexpected error preparing job");
                 console.error("❌ Error preparing job:", err);
               } finally {
-                setSavingJob(false); // ✅ End saving state
+                setSavingJob(false);
               }
             }}
           >
             {/* Customer */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">Customer *</span>
               </label>
               <input
@@ -258,13 +259,13 @@ export default function Checklist() {
                 placeholder="Enter customer name"
                 className="input input-bordered input-primary w-full focus:ring-2 focus:ring-primary transition-all"
                 required
-                disabled={savingJob} // ✅ Disable inputs during save
+                disabled={savingJob}
               />
             </div>
 
             {/* Model */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">Model *</span>
               </label>
               <input
@@ -272,13 +273,13 @@ export default function Checklist() {
                 placeholder="Enter model"
                 className="input input-bordered input-primary w-full focus:ring-2 focus:ring-primary transition-all"
                 required
-                disabled={savingJob} // ✅ Disable inputs during save
+                disabled={savingJob}
               />
             </div>
 
             {/* Body Type */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">Body Type *</span>
               </label>
               <input
@@ -286,13 +287,13 @@ export default function Checklist() {
                 placeholder="Enter body type"
                 className="input input-bordered input-primary w-full focus:ring-2 focus:ring-primary transition-all"
                 required
-                disabled={savingJob} // ✅ Disable inputs during save
+                disabled={savingJob}
               />
             </div>
 
             {/* Chassis Number */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">Chassis Number *</span>
               </label>
               <input
@@ -306,7 +307,7 @@ export default function Checklist() {
 
             {/* Engine Number */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">Engine Number *</span>
               </label>
               <input
@@ -320,7 +321,7 @@ export default function Checklist() {
 
             {/* Date */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">Date *</span>
               </label>
               <input
@@ -334,7 +335,7 @@ export default function Checklist() {
 
             {/* J/O No. */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">J/O No. *</span>
               </label>
               <input
@@ -348,7 +349,7 @@ export default function Checklist() {
 
             {/* CS No. */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">CS No. *</span>
               </label>
               <input
@@ -362,7 +363,7 @@ export default function Checklist() {
 
             {/* Key Number */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">Key Number *</span>
               </label>
               <input
@@ -376,7 +377,7 @@ export default function Checklist() {
 
             {/* Job Type */}
             <div className="form-control">
-              <label className="label text-sm sm:text-base font-medium">
+              <label className="label text-sm sm:text-base font-semibold">
                 <span className="label-text">Job Type *</span>
               </label>
               <select
@@ -432,10 +433,14 @@ export default function Checklist() {
     console.log("📋 Checklist data (temporary):", job?.checklist);
 
     return (
-      <div className="card bg-base-100 shadow-xl rounded-xl p-4 sm:p-6 lg:p-8"> {/* ✅ Enhanced card */}
-        <h4 className="text-xl sm:text-2xl font-bold mb-6 text-primary flex items-center gap-2">
-          <ClipboardList size={24} /> Checklist for {job.jobInfo?.customer}
-        </h4>
+      <div className="bg-linear-to-br from-base-100 to-base-200 border-2 border-base-300 shadow-xl rounded-xl overflow-hidden p-4 sm:p-6 lg:p-8">
+        {/* Header */}
+        <div className="bg-linear-to-r from-info/15 to-info/5 p-4 sm:p-6 rounded-lg mb-6 border-l-4 border-info">
+          <h4 className="text-2xl sm:text-3xl font-bold text-info flex items-center gap-3 mb-2">
+            <ClipboardList size={28} /> Checklist for {job.jobInfo?.customer}
+          </h4>
+          <p className="text-sm text-base-content/70">Fill in all checklist items for {job.category?.name}</p>
+        </div>
 
         <ChecklistWizard
           job={job}
@@ -567,32 +572,36 @@ export default function Checklist() {
   };
 
   return (
-    <div id="past-jobs-card" className="card bg-base-200 shadow-xl rounded-xl p-4 sm:p-6 lg:p-8 mt-6"> {/* ✅ Enhanced card */}
-      <h4 className="text-lg sm:text-xl font-semibold mb-6 text-primary flex items-center gap-2">
-        <Calendar size={20} /> Past Jobs
-      </h4>
+    <div id="past-jobs-card" className="bg-linear-to-br from-base-100 to-base-200 border-2 border-base-300 shadow-xl rounded-xl overflow-hidden p-4 sm:p-6 lg:p-8 mt-6">
+      {/* Header Section */}
+      <div className="bg-linear-to-r from-accent/15 to-accent/5 p-4 sm:p-5 rounded-lg mb-6 border-l-4 border-accent">
+        <h4 className="text-xl sm:text-2xl font-bold text-accent flex items-center gap-3 mb-2">
+          <Calendar size={24} /> Past Jobs
+        </h4>
+        <p className="text-sm text-base-content/70">View, edit, and manage previously created job records</p>
+      </div>
 
-      {/* Enhanced Search inputs */}
-      <div className="mb-6 flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+      {/* Search and Filter Section */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
-          <label className="label font-medium text-sm sm:text-base">
+          <label className="label font-semibold text-sm sm:text-base mb-2">
+            <Search size={16} className="mr-2" />
             <span className="label-text">Search by Customer, Model, or Category</span>
           </label>
-          <div className="input-group">
-            <input
-              type="text"
-              placeholder="Enter search term..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // reset to first page when searching
-              }}
-              className="input input-bordered w-full focus:ring-2 focus:ring-primary transition-all"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Enter search term..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="input input-bordered w-full focus:ring-2 focus:ring-primary transition-all"
+          />
         </div>
         <div className="flex-1">
-          <label className="label font-medium text-sm sm:text-base">
+          <label className="label font-semibold text-sm sm:text-base mb-2">
+            <Calendar size={16} className="mr-2" />
             <span className="label-text">Filter by Date</span>
           </label>
           <input
@@ -616,36 +625,82 @@ export default function Checklist() {
       ) : (
         <div className="space-y-4 animate-fadeIn">
           {currentJobs.map((job) => (
-            <div key={job._id} className="border border-base-300 rounded-xl p-4 sm:p-6 bg-base-100 shadow-md hover:shadow-lg transition-all">
-              <h5 className="font-semibold text-lg text-primary mb-2">
-                {job.category?.name || "Unknown Category"}
-              </h5>
-              <p className="text-sm text-base-content/80 mb-1">
-                Customer: {job.jobInfo?.customer}
-              </p>
-              <p className="text-sm text-base-content/80 mb-1">
-                Model: {job.jobInfo?.model}
-              </p>
-              <p className="text-sm text-base-content/80 mb-4">
-                Date:{" "}
-                {job.jobInfo?.date
-                  ? new Date(job.jobInfo.date).toLocaleDateString()
-                  : "N/A"}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                <button
-                  className="btn btn-sm btn-warning btn-outline hover:btn-solid transition-all hover:scale-105 flex items-center gap-1"
-                  onClick={() => setEditingJob(job)}
-                >
-                  <Edit size={14} /> Edit Job
-                </button>
-                <button
-                  className="btn btn-sm btn-error btn-outline hover:btn-solid transition-all hover:scale-105 flex items-center gap-1"
-                  onClick={() => setDeleteJobId(job._id)} // Open delete modal
-                >
-                  <Trash2 size={14} /> Delete Job
-                </button>
-              </div>
+            <div
+              key={job._id}
+              className="border-2 border-base-300 rounded-xl overflow-hidden hover:border-primary/50 transition-all duration-300 shadow-md hover:shadow-lg"
+            >
+              <details className="group cursor-pointer">
+                  <summary className="p-4 sm:p-5 bg-linear-to-r from-primary/15 to-primary/5 hover:from-primary/25 hover:to-primary/15 transition-all flex items-center justify-between group-open:border-b-2 group-open:border-primary/30">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Briefcase size={16} className="text-primary shrink-0 hidden sm:block" />
+                      <div className="min-w-0 flex-1">
+                        <h5 className="font-bold text-sm sm:text-base lg:text-lg text-base-content truncate">
+                          {job.category?.name || "Unknown Category"}
+                        </h5>
+                        <p className="text-xs text-base-content/60 line-clamp-1">
+                          {job.jobInfo?.customer} - {job.jobInfo?.model}
+                        </p>
+                      </div>
+                      <div className="flex gap-1 ml-auto shrink-0 flex-wrap justify-end">
+                        <span className="badge badge-xs sm:badge-sm badge-primary font-semibold text-xs sm:text-sm">
+                          {job.jobInfo?.jobType || "Job"}
+                        </span>
+                        <span className="badge badge-xs sm:badge-sm badge-outline text-xs">
+                          {job.jobInfo?.date
+                            ? new Date(job.jobInfo.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronDown size={20} className="transition-transform duration-300 group-open:rotate-180 shrink-0 ml-2" />
+                </summary>
+
+                {/* Job Details - shown when expanded */}
+                <div className="p-3 sm:p-5 bg-base-50 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                    <div className="p-2 sm:p-3 bg-base-100 rounded-lg border border-base-300">
+                      <p className="text-xs text-base-content/60 font-semibold mb-1">Customer</p>
+                      <p className="text-xs sm:text-sm font-medium text-base-content truncate">{job.jobInfo?.customer || "N/A"}</p>
+                    </div>
+                    <div className="p-2 sm:p-3 bg-base-100 rounded-lg border border-base-300">
+                      <p className="text-xs text-base-content/60 font-semibold mb-1">Model</p>
+                      <p className="text-xs sm:text-sm font-medium text-base-content truncate">{job.jobInfo?.model || "N/A"}</p>
+                    </div>
+                    <div className="p-2 sm:p-3 bg-base-100 rounded-lg border border-base-300">
+                      <p className="text-xs text-base-content/60 font-semibold mb-1">Body Type</p>
+                      <p className="text-xs sm:text-sm font-medium text-base-content truncate">{job.jobInfo?.bodyType || "N/A"}</p>
+                    </div>
+                    <div className="p-2 sm:p-3 bg-base-100 rounded-lg border border-base-300">
+                      <p className="text-xs text-base-content/60 font-semibold mb-1">Chassis</p>
+                      <p className="text-xs sm:text-sm font-medium text-base-content font-mono truncate">{job.jobInfo?.chassisNum || "N/A"}</p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col xs:flex-row gap-2 flex-wrap justify-end pt-3 border-t border-base-300">
+                    <button
+                      className="btn btn-xs sm:btn-sm btn-warning gap-1 sm:gap-2 whitespace-nowrap"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setEditingJob(job);
+                      }}
+                    >
+                      <Edit size={14} /> <span className="hidden xs:inline">Edit Job</span>
+                    </button>
+                    <button
+                      className="btn btn-xs sm:btn-sm btn-error btn-outline gap-1 sm:gap-2 whitespace-nowrap"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setDeleteJobId(job._id);
+                      }}
+                    >
+                      <Trash2 size={14} /> <span className="hidden xs:inline">Delete</span>
+                    </button>
+                  </div>
+                </div>
+              </details>
             </div>
           ))}
         </div>
@@ -760,84 +815,121 @@ export default function Checklist() {
 };
 const renderCards = (cats) => {
   const isTwo = cats.length === 2;
+  const colorClasses = [
+    { bg: "bg-linear-to-br from-primary/10 to-primary/5", headerBg: "from-primary/15 to-primary/5", badge: "badge-primary" },
+    { bg: "bg-linear-to-br from-success/10 to-success/5", headerBg: "from-success/15 to-success/5", badge: "badge-success" },
+    { bg: "bg-linear-to-br from-info/10 to-info/5", headerBg: "from-info/15 to-info/5", badge: "badge-info" },
+    { bg: "bg-linear-to-br from-warning/10 to-warning/5", headerBg: "from-warning/15 to-warning/5", badge: "badge-warning" },
+  ];
 
   return (
     <div
       className={`grid gap-4 sm:gap-6 ${
         isTwo
-          ? "grid-cols-1 md:grid-cols-2 justify-center max-w-2xl mx-auto" // ✅ Balanced layout for 2 cards
+          ? "grid-cols-1 md:grid-cols-2 justify-center max-w-2xl mx-auto" 
           : "grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
       }`}
     >
-      {cats.map((cat) => (
-        <div
-          key={cat._id}
-          className="card bg-linear-to-br from-base-200 to-base-300 shadow-lg hover:shadow-xl cursor-pointer hover:scale-105 transition-all duration-300 rounded-xl"
-          onClick={() => {
-            handleClick(cat);
-            setCurrentJob(null);
-            setShowChecklist(false);
-            localStorage.removeItem("currentJob");
-            localStorage.setItem("showChecklist", "false");
-          }}
-        >
-          <div className="card-body p-4 sm:p-6">
-            {/* Enhanced Icon + Title */}
-            <div className="flex items-center gap-3 mb-2">
-              {cat.children?.length ? (
-                <FolderOpen className="text-primary w-6 h-6" />
-              ) : (
-                <ClipboardList className="text-secondary w-6 h-6" />
+      {cats.map((cat, idx) => {
+        const colorClass = colorClasses[idx % colorClasses.length];
+        const hasSubcategories = cat.children?.length > 0;
+
+        return (
+          <div
+            key={cat._id}
+            className={`${colorClass.bg} border-2 border-base-300 shadow-md hover:shadow-xl cursor-pointer hover:border-primary/50 transition-all duration-300 rounded-xl overflow-hidden`}
+            onClick={() => {
+              handleClick(cat);
+              setCurrentJob(null);
+              setShowChecklist(false);
+              localStorage.removeItem("currentJob");
+              localStorage.setItem("showChecklist", "false");
+            }}
+          >
+            <div className={`p-6 bg-linear-to-r ${colorClass.headerBg}`}>
+              <div className="flex items-start justify-between gap-2 sm:gap-3 mb-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                  {hasSubcategories ? (
+                    <FolderOpen size={20} className="text-primary shrink-0" />
+                  ) : (
+                    <Package size={20} className="text-secondary shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-sm sm:text-base lg:text-lg text-base-content">{cat.name}</h3>
+                    {hasSubcategories && (
+                      <p className="text-xs text-base-content/60">{cat.children.length} subcategories</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {cat.description && (
+                <p className="text-xs sm:text-sm text-base-content/70 mb-4 line-clamp-2">{cat.description}</p>
               )}
-              <h3 className="card-title text-lg sm:text-xl font-semibold text-base-content">{cat.name}</h3>
-            </div>
 
-            {/* Description */}
-            <p className="text-sm sm:text-base text-base-content/70 mb-4">
-              {cat.description || "No description"}
-            </p>
-
-            {/* Actions */}
-            <div className="card-actions justify-end">
-              <span className="badge badge-outline badge-primary hover:badge-solid transition-all">View</span>
+              <div className="flex items-center justify-between">
+                <span className={`badge ${colorClass.badge} font-semibold`}>
+                  {hasSubcategories ? "Browse" : "Start"}
+                </span>
+                <span className="text-2xl">→</span>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
 
 return (
-  <div className="p-4 sm:p-6 lg:p-8 space-y-6"> {/* ✅ Responsive padding */}
-    <h2 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-primary flex items-center gap-2">
-      <ClipboardList size={28} /> Checklist
-    </h2>
+  <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-3xl sm:text-4xl font-bold text-primary flex items-center gap-3">
+        <ClipboardList size={32} /> Checklist Management
+      </h2>
+    </div>
 
     {selected ? (
       <div>
-        <button className="btn btn-outline btn-primary mb-4 sm:mb-6 hover:btn-solid transition-all hover:scale-105 flex items-center gap-2" onClick={handleBack}>
-          <ArrowLeft size={16} /> Back
+        <button 
+          className="btn btn-primary btn-outline gap-2 mb-6 hover:btn-solid transition-all" 
+          onClick={handleBack}
+        >
+          <ArrowLeft size={18} /> Back to Categories
         </button>
-        <h3 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-secondary">{selected.name}</h3>
+        
+        <div className="bg-linear-to-r from-secondary/15 to-secondary/5 p-4 sm:p-6 rounded-xl border-l-4 border-secondary mb-6">
+          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-secondary flex items-center gap-2 mb-1 flex-wrap">
+            <Package size={24} /> {selected.name}
+          </h3>
+          {selected.description && <p className="text-sm text-base-content/70">{selected.description}</p>}
+        </div>
 
         {selected.children && selected.children.length > 0 ? (
           renderCards(selected.children)
         ) : (
           <>
             {showChecklist ? (
-              renderChecklist(currentJob) // ✅ Show checklist if flag is true
+              renderChecklist(currentJob)
             ) : (
               <>
                 {renderJobForm(selected, checklist)}
-                {renderPastJobs()} {/* ✅ Only show past jobs under job form */}
+                {renderPastJobs()}
               </>
             )}
           </>
         )}
       </div>
     ) : (
-      renderCards(categories)
+      <>
+        <div className="bg-linear-to-r from-primary/10 to-primary/5 p-4 sm:p-6 rounded-xl border-l-4 border-primary mb-6">
+          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-primary flex items-center gap-2 mb-2 flex-wrap">
+            📋 Select a Category to Begin
+          </h3>
+          <p className="text-sm text-base-content/70">Choose a category below to create or manage job checklists</p>
+        </div>
+        {renderCards(categories)}
+      </>
     )}
   </div>
 );
