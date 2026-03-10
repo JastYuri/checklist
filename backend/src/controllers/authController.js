@@ -187,20 +187,14 @@ export const registerUser = async (req, res) => {
 // ✅ Login User with Validation & Settings Enforcement
 export const loginUser = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { identifier, password } = req.body; // identifier can be username or email
 
     // ✅ Get system settings
     const settings = await getSystemSettings();
 
-    // ✅ Validate email format
-    if (!validateEmail(email)) {
-      return res.status(400).json({ message: "Invalid email format" });
-    }
-
-    // ✅ Validate email domain exists (DNS check)
-    const domainValid = await validateEmailDomain(email);
-    if (!domainValid) {
-      return res.status(400).json({ message: "Email domain does not exist" });
+    // ✅ Validate identifier
+    if (!identifier || identifier.trim() === "") {
+      return res.status(400).json({ message: "Username or email is required" });
     }
 
     // ✅ Validate password is not empty
@@ -208,8 +202,11 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Password is required" });
     }
 
-    // ✅ Find user - EXPLICITLY SELECT password field
-    const user = await User.findOne({ email }).select("+password");
+    // ✅ Find user by username or email - EXPLICITLY SELECT password field
+    let user = await User.findOne({ $or: [
+      { email: identifier },
+      { username: identifier }
+    ] }).select("+password");
     
     // ✅ Check if user exists
     if (!user) {

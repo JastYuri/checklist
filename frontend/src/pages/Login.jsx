@@ -9,7 +9,7 @@ export default function Login() {
   const { user, login } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState(""); // username or email
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -19,8 +19,8 @@ export default function Login() {
   const [secretMode, setSecretMode] = useState(false);
 
   const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    // Accept username or email, so skip strict validation
+    return identifier.trim().length >= 3;
   };
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export default function Login() {
     e.preventDefault();
     
     // ✅ Secret trigger: 8 empty clicks (no visual feedback)
-    if (!email && !password) {
+    if (!identifier && !password) {
       const newCount = loginClickCount + 1;
       setLoginClickCount(newCount);
       
@@ -52,14 +52,14 @@ export default function Login() {
     }
     
     // ✅ Reset counter when user starts typing (prevents accidental triggers)
-    if (email || password) {
+    if (identifier || password) {
       setLoginClickCount(0);
     }
     
     setLoading(true);
 
-    if (!validateEmail(email)) {
-      toast.error("Invalid email format");
+    if (!validateEmail(identifier)) {
+      toast.error("Enter username or email");
       setLoading(false);
       return;
     }
@@ -78,7 +78,7 @@ export default function Login() {
     }
 
     try {
-      const res = await axiosInstance.post("/auth/login", { email, password });
+      const res = await axiosInstance.post("/auth/login", { identifier, password });
       login(res.data);
       toast.success("Logged in successfully!");
       navigate("/dashboard");
@@ -109,16 +109,16 @@ export default function Login() {
             {/* Email Input */}
             <div className="form-control">
               <label className="label pb-2">
-                <span className="label-text font-semibold text-gray-700">Email Address</span>
+                <span className="label-text font-semibold text-gray-700">Username or Email</span>
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3.5 text-gray-400" size={20} />
                 <input
-                  type="email"
-                  placeholder="you@example.com"
+                  type="text"
+                  placeholder="Enter username or email"
                   className="input input-bordered w-full pl-10 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                 />
               </div>
             </div>
