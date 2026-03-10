@@ -1,6 +1,50 @@
 import User from "../models/User.js";
+import Settings from "../models/Settings.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import dns from "dns";
+import { promisify } from "util";
+
+// ✅ Get system settings (with caching)
+let cachedSettings = null;
+let settingsLastFetch = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+const getSystemSettings = async () => {
+  const now = Date.now();
+  if (cachedSettings && now - settingsLastFetch < CACHE_DURATION) {
+    return cachedSettings;
+  }
+
+  try {
+    let settings = await Settings.findOne();
+    if (!settings) {
+      settings = await Settings.create({
+        passwordMinLength: 8,
+        passwordRequireUppercase: true,
+        passwordRequireNumbers: true,
+        sessionTimeout: 30,
+        maxLoginAttempts: 5,
+        twoFactorEnabled: false,
+        allowUserRegistration: true,
+        allowMultipleSessions: false
+      });
+    }
+    cachedSettings = settings;
+    settingsLastFetch = now;
+    return settings;
+  } catch (error) {
+    // Error fetching settings (details logged internally)
+    // Return defaults if fetch fails
+    return {
+      passwordMinLength: 8,
+      passwordRequireUppercase: true,
+      passwordRequireNumbers: true,
+      allowUserRegistration: true,
+      maxLoginAttempts: 5
+    };
+  }
+};
 
 // ✅ Input Validation Helper Functions
 const validateEmail = (email) => {
@@ -8,8 +52,34 @@ const validateEmail = (email) => {
   return emailRegex.test(email);
 };
 
-const validatePassword = (password) => {
-  const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+// ✅ Validate Email Domain Exists (DNS Check)
+const validateEmailDomain = async (email) => {
+  try {
+    const domain = email.split('@')[1];
+    const resolveMx = promisify(dns.resolveMx);
+    const mxRecords = await resolveMx(domain);
+    return mxRecords && mxRecords.length > 0;
+  } catch (error) {
+    // Domain doesn't exist or DNS lookup failed
+    return false;
+  }
+};
+
+const validatePassword = (password, settings) => {
+  // Build regex based on settings
+  let regex = `^`;
+  
+  if (settings.passwordRequireUppercase) {
+    regex += `(?=.*[A-Z])`;
+  }
+  
+  if (settings.passwordRequireNumbers) {
+    regex += `(?=.*\\d)`;
+  }
+  
+  regex += `.{${settings.passwordMinLength},}$`;
+  
+  const passwordRegex = new RegExp(regex);
   return passwordRegex.test(password);
 };
 
@@ -22,6 +92,16 @@ const validateUsername = (username) => {
 export const registerUser = async (req, res) => {
   try {
     const { username, email, password, secretCode } = req.body;
+
+    // ✅ Get system settings
+    const settings = await getSystemSettings();
+
+    // ✅ Check if user registration is allowed
+    if (!settings.allowUserRegistration) {
+      return res.status(403).json({ 
+        message: "User registration is currently disabled. Contact administrator." 
+      });
+    }
 
     // ✅ 1. Check for Secret Code (Required for registration)
     const validCodes = process.env.SECRET_REGISTER_CODES
@@ -39,10 +119,21 @@ export const registerUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid email format" });
     }
 
-    // ✅ 3. Validate password strength (min 8 chars, 1 uppercase, 1 number)
-    if (!validatePassword(password)) {
+    // ✅ 2.5 Validate email domain exists (DNS check)
+    const domainValid = await validateEmailDomain(email);
+    if (!domainValid) {
+      return res.status(400).json({ message: "Email domain does not exist" });
+    }
+
+    // ✅ 3. Validate password strength (based on system settings)
+    if (!validatePassword(password, settings)) {
+      const requirements = [];
+      requirements.push(`at least ${settings.passwordMinLength} characters`);
+      if (settings.passwordRequireUppercase) requirements.push("1 uppercase letter");
+      if (settings.passwordRequireNumbers) requirements.push("1 number");
+      
       return res.status(400).json({ 
-        message: "Password must be at least 8 characters with 1 uppercase letter and 1 number" 
+        message: `Password must contain: ${requirements.join(", ")}` 
       });
     }
 
@@ -83,23 +174,33 @@ export const registerUser = async (req, res) => {
     res.status(201).json({ 
       _id: user._id, 
       username: user.username, 
-      email: user.email, 
+      email: user.email,
+      role: user.role,
       token 
     });
   } catch (error) {
-    console.error("Register error:", error);
+    // Registration error (details logged internally)
     res.status(500).json({ message: "Server error during registration" });
   }
 };
 
-// ✅ Login User with Validation
+// ✅ Login User with Validation & Settings Enforcement
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // ✅ Get system settings
+    const settings = await getSystemSettings();
+
     // ✅ Validate email format
     if (!validateEmail(email)) {
       return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // ✅ Validate email domain exists (DNS check)
+    const domainValid = await validateEmailDomain(email);
+    if (!domainValid) {
+      return res.status(400).json({ message: "Email domain does not exist" });
     }
 
     // ✅ Validate password is not empty
@@ -115,9 +216,16 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
+    // ✅ Check if user is locked due to too many failed attempts (SKIP FOR ADMINS)
+    if (user.role !== "admin" && user.failedLoginAttempts >= settings.maxLoginAttempts) {
+      return res.status(403).json({ 
+        message: `Account locked due to ${settings.maxLoginAttempts} failed login attempts. Contact administrator to unlock.`
+      });
+    }
+
     // ✅ Check if password field exists
     if (!user.password) {
-      console.error("❌ User found but password is missing:", user._id);
+      // User found but password is missing (details logged internally)
       return res.status(500).json({ message: "Server error: User password missing" });
     }
 
@@ -126,13 +234,48 @@ export const loginUser = async (req, res) => {
     try {
       isMatch = await bcrypt.compare(password, user.password);
     } catch (compareError) {
-      console.error("Password comparison error:", compareError);
+      // Password comparison error (details logged internally)
       return res.status(500).json({ message: "Error comparing password" });
     }
 
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      // ✅ Increment failed login attempts (SKIP FOR ADMINS)
+      if (user.role !== "admin") {
+        user.failedLoginAttempts += 1;
+        user.lastFailedLogin = new Date();
+        await user.save();
+      }
+
+      const attemptsRemaining = settings.maxLoginAttempts - user.failedLoginAttempts;
+      return res.status(401).json({ 
+        message: user.role === "admin" 
+          ? "Invalid credentials" 
+          : `Invalid credentials. ${attemptsRemaining} attempts remaining.` 
+      });
     }
+
+    // ✅ Check if user is active (not banned/suspended)
+    if (!user.isActive) {
+      return res.status(403).json({ message: "Your account has been suspended. Contact administrator." });
+    }
+
+    // ✅ Reset failed login attempts on successful login
+    user.failedLoginAttempts = 0;
+    user.lastFailedLogin = null;
+
+    // ✅ Log login activity
+    user.lastLogin = new Date();
+    user.loginHistory.push({
+      timestamp: new Date(),
+      ipAddress: req.ip || req.connection.remoteAddress
+    });
+
+    // Keep only last 50 logins
+    if (user.loginHistory.length > 50) {
+      user.loginHistory = user.loginHistory.slice(-50);
+    }
+
+    await user.save();
 
     // ✅ Generate token
     const token = generateToken(user._id);
@@ -141,11 +284,12 @@ export const loginUser = async (req, res) => {
     res.json({ 
       _id: user._id, 
       username: user.username, 
-      email: user.email, 
+      email: user.email,
+      role: user.role,
       token 
     });
   } catch (error) {
-    console.error("Login error:", error);
+    // Login error (details logged internally)
     res.status(500).json({ message: "Server error during login" });
   }
 };

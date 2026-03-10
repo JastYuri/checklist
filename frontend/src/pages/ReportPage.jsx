@@ -338,58 +338,58 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
         <h4 className="text-lg font-semibold">Summary Checklist</h4>
         {/* Legends */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="alert alert-info">
-            <div className="text-sm">
+          <div className="alert alert-info p-3 sm:p-4">
+            <div className="text-xs sm:text-sm wrap-break-word">
               <strong>Defect Code Legend:</strong><br />
-              ■XX - Functional Defect/Defect Related to Safety/Defect Not Satisfying the Drawing/Defect Related to Regulations<br />
-              ■X - Functional Defect Does Not Mentioned Above<br />
-              □XX - Sensory/Appearance Defect Evaluation - Major<br />
-              □X - Sensory/Appearance Defect Evaluation - Minor
+              <span className="block mt-2">■XX - Functional Defect/Defect Related to Safety/Defect Not Satisfying the Drawing/Defect Related to Regulations</span>
+              <span className="block mt-1">■X - Functional Defect Does Not Mentioned Above</span>
+              <span className="block mt-1">□XX - Sensory/Appearance Defect Evaluation - Major</span>
+              <span className="block mt-1">□X - Sensory/Appearance Defect Evaluation - Minor</span>
             </div>
           </div>
-          <div className="alert alert-warning">
-            <div className="text-sm">
+          <div className="alert alert-warning p-3 sm:p-4">
+            <div className="text-xs sm:text-sm wrap-break-word">
               <strong>Status Legend:</strong><br />
-              ❌ No Good<br />
-              ⓧ Corrected
+              <span className="block mt-2">❌ No Good</span>
+              <span className="block mt-1">ⓧ Corrected</span>
             </div>
           </div>
         </div>
         {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="table table-zebra w-full">
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <table className="table table-zebra w-full text-xs sm:text-sm">
             <thead>
               <tr>
-                <th className="text-center">No.</th>
-                <th className="text-center">Defect Code</th>
-                <th className="text-center">Defect Encountered</th>
-                <th className="text-center">Status</th>
-                <th className="text-center">Recurrence</th>
-                <th className="text-center">Image</th>
+                <th className="text-center p-2 sm:p-3">No.</th>
+                <th className="text-center p-2 sm:p-3">Code</th>
+                <th className="text-center p-2 sm:p-3 min-w-30">Defect</th>
+                <th className="text-center p-2 sm:p-3">Status</th>
+                <th className="text-center p-2 sm:p-3">Recur.</th>
+                <th className="text-center p-2 sm:p-3">Img</th>
               </tr>
             </thead>
             <tbody>
               {(defectSummary || []).map((defect, idx) => (
                 <tr key={idx}>
-                  <td className="text-center">{defect.no || (idx + 1)}</td>
-                  <td className="text-center">
+                  <td className="text-center p-2 sm:p-3">{defect.no || (idx + 1)}</td>
+                  <td className="text-center p-2 sm:p-3">
                     {defect.defectCode ? (
                       <span className={defect.defectCode.includes('XX') ? 'font-bold' : ''}>
                         {defect.defectCode.includes('functional') ? '■' : '□'}{defect.defectCode.includes('XX') ? 'XX' : 'X'}
                       </span>
                     ) : 'N/A'}
                   </td>
-                  <td className="text-center">{defect.defectEncountered || 'N/A'}</td>
-                  <td className="text-center">
+                  <td className="text-center p-2 sm:p-3 wrap-break-word max-w-37.5 sm:max-w-none">{defect.defectEncountered || 'N/A'}</td>
+                  <td className="text-center p-2 sm:p-3">
                     {defect.status === 'noGood' ? '❌' : defect.status === 'corrected' ? 'ⓧ' : 'N/A'}
                   </td>
-                  <td className="text-center">{defect.recurrence || 0}</td>
-                  <td className="text-center">
+                  <td className="text-center p-2 sm:p-3">{defect.recurrence || 0}</td>
+                  <td className="text-center p-2 sm:p-3">
                    {defect.image ? (
   <img
     src={defect.image}
     alt="Defect"
-    className="w-12 h-12 object-cover rounded mx-auto"
+    className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded mx-auto"
   />
 ) : 'N/A'}
                   </td>
@@ -411,64 +411,64 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
         
         {/* I. Break Testing */}
         <div>
-          <h5 className="font-semibold">I. Break Testing (Breaking Force daN)</h5>
+          <h5 className="font-semibold text-sm sm:text-base">I. Break Testing (Breaking Force daN)</h5>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <h6 className="font-medium">Maximum Breaking Force</h6>
-              <table className="table table-zebra w-full">
+            <div className="overflow-x-auto">
+              <h6 className="font-medium text-xs sm:text-sm mb-2">Maximum Breaking Force</h6>
+              <table className="table table-zebra w-full text-xs sm:text-sm">
                 <thead>
                   <tr>
-                    <th></th>
-                    <th>Front (Left)</th>
-                    <th>Front (Right)</th>
-                    <th>Sum</th>
-                    <th>Difference</th>
+                    <th className="p-1 sm:p-2 text-xs"></th>
+                    <th className="p-1 sm:p-2 text-xs">Front L</th>
+                    <th className="p-1 sm:p-2 text-xs">Front R</th>
+                    <th className="p-1 sm:p-2 text-xs">Sum</th>
+                    <th className="p-1 sm:p-2 text-xs">Diff</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Front</td>
-                    <td>{techData.breakingForce?.max?.front?.left || 'N/A'}</td>
-                    <td>{techData.breakingForce?.max?.front?.right || 'N/A'}</td>
-                    <td>{techData.breakingForce?.max?.front?.sum || 'N/A'}</td>
-                    <td>{techData.breakingForce?.max?.front?.difference || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">Front</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.max?.front?.left || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.max?.front?.right || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.max?.front?.sum || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.max?.front?.difference || 'N/A'}</td>
                   </tr>
                   <tr>
-                    <td>Rear</td>
-                    <td>{techData.breakingForce?.max?.rear?.left || 'N/A'}</td>
-                    <td>{techData.breakingForce?.max?.rear?.right || 'N/A'}</td>
-                    <td>{techData.breakingForce?.max?.rear?.sum || 'N/A'}</td>
-                    <td>{techData.breakingForce?.max?.rear?.difference || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">Rear</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.max?.rear?.left || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.max?.rear?.right || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.max?.rear?.sum || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.max?.rear?.difference || 'N/A'}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
-            <div>
-              <h6 className="font-medium">Minimum Breaking Force</h6>
-              <table className="table table-zebra w-full">
+            <div className="overflow-x-auto">
+              <h6 className="font-medium text-xs sm:text-sm mb-2">Minimum Breaking Force</h6>
+              <table className="table table-zebra w-full text-xs sm:text-sm">
                 <thead>
                   <tr>
-                    <th></th>
-                    <th>Front (Left)</th>
-                    <th>Front (Right)</th>
-                    <th>Sum</th>
-                    <th>Difference</th>
+                    <th className="p-1 sm:p-2 text-xs"></th>
+                    <th className="p-1 sm:p-2 text-xs">Front L</th>
+                    <th className="p-1 sm:p-2 text-xs">Front R</th>
+                    <th className="p-1 sm:p-2 text-xs">Sum</th>
+                    <th className="p-1 sm:p-2 text-xs">Diff</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Front</td>
-                    <td>{techData.breakingForce?.min?.front?.left || 'N/A'}</td>
-                    <td>{techData.breakingForce?.min?.front?.right || 'N/A'}</td>
-                    <td>{techData.breakingForce?.min?.front?.sum || 'N/A'}</td>
-                    <td>{techData.breakingForce?.min?.front?.difference || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">Front</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.min?.front?.left || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.min?.front?.right || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.min?.front?.sum || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.min?.front?.difference || 'N/A'}</td>
                   </tr>
                   <tr>
-                    <td>Rear</td>
-                    <td>{techData.breakingForce?.min?.rear?.left || 'N/A'}</td>
-                    <td>{techData.breakingForce?.min?.rear?.right || 'N/A'}</td>
-                    <td>{techData.breakingForce?.min?.rear?.sum || 'N/A'}</td>
-                    <td>{techData.breakingForce?.min?.rear?.difference || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">Rear</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.min?.rear?.left || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.min?.rear?.right || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.min?.rear?.sum || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{techData.breakingForce?.min?.rear?.difference || 'N/A'}</td>
                   </tr>
                 </tbody>
               </table>
@@ -478,121 +478,131 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
 
         {/* II. Speed Testing */}
         <div>
-          <h5 className="font-semibold">II. Speed Testing</h5>
-          <table className="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th>Speedometer Reading</th>
-                <th>Speed Tester Reading</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>{techData.speedTesting?.speedometer || 'N/A'}</td>
-                <td>{techData.speedTesting?.tester || 'N/A'}</td>
-              </tr>
-            </tbody>
-          </table>
+          <h5 className="font-semibold text-sm sm:text-base">II. Speed Testing</h5>
+          <div className="overflow-x-auto">
+            <table className="table table-zebra w-full text-xs sm:text-sm">
+              <thead>
+                <tr>
+                  <th className="p-1 sm:p-2">Speedometer</th>
+                  <th className="p-1 sm:p-2">Speed Tester</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="p-1 sm:p-2">{techData.speedTesting?.speedometer || 'N/A'}</td>
+                  <td className="p-1 sm:p-2">{techData.speedTesting?.tester || 'N/A'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
                 {/* III. Turning Radius */}
         <div>
-          <h5 className="font-semibold">III. Turning Radius</h5>
-          <table className="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th></th>
-                <th>Inner Tire</th>
-                <th>Outer Tire</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Left Hand</td>
-                <td>{techData.turningRadius?.inner?.left || 'N/A'}</td>
-                <td>{techData.turningRadius?.outer?.left || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td>Right Hand</td>
-                <td>{techData.turningRadius?.inner?.right || 'N/A'}</td>
-                <td>{techData.turningRadius?.outer?.right || 'N/A'}</td>
-              </tr>
-            </tbody>
-          </table>
+          <h5 className="font-semibold text-sm sm:text-base">III. Turning Radius</h5>
+          <div className="overflow-x-auto">
+            <table className="table table-zebra w-full text-xs sm:text-sm">
+              <thead>
+                <tr>
+                  <th className="p-1 sm:p-2 text-xs"></th>
+                  <th className="p-1 sm:p-2 text-xs">Inner Tire</th>
+                  <th className="p-1 sm:p-2 text-xs">Outer Tire</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="p-1 sm:p-2">Left</td>
+                  <td className="p-1 sm:p-2">{techData.turningRadius?.inner?.left || 'N/A'}</td>
+                  <td className="p-1 sm:p-2">{techData.turningRadius?.outer?.left || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td className="p-1 sm:p-2">Right</td>
+                  <td className="p-1 sm:p-2">{techData.turningRadius?.inner?.right || 'N/A'}</td>
+                  <td className="p-1 sm:p-2">{techData.turningRadius?.outer?.right || 'N/A'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* IV. Slip Tester */}
         <div>
-          <h5 className="font-semibold">IV. Slip Tester</h5>
-          <table className="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th>Speed</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(techData.slipTester || []).map((slip, idx) => (
-                <tr key={idx}>
-                  <td>{slip.speed || 'N/A'}</td>
-                  <td>{slip.value || 'N/A'}</td>
+          <h5 className="font-semibold text-sm sm:text-base">IV. Slip Tester</h5>
+          <div className="overflow-x-auto">
+            <table className="table table-zebra w-full text-xs sm:text-sm">
+              <thead>
+                <tr>
+                  <th className="p-1 sm:p-2">Speed</th>
+                  <th className="p-1 sm:p-2">Value</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(techData.slipTester || []).map((slip, idx) => (
+                  <tr key={idx}>
+                    <td className="p-1 sm:p-2">{slip.speed || 'N/A'}</td>
+                    <td className="p-1 sm:p-2">{slip.value || 'N/A'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* V. Headlight Tester */}
         <div>
-          <h5 className="font-semibold">V. Headlight Tester</h5>
-          <table className="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th></th>
-                <th>Low Beam (Before)</th>
-                <th>Low Beam (After)</th>
-                <th>High Beam (Before)</th>
-                <th>High Beam (After)</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Left Hand</td>
-                <td>{techData.headlightTester?.lowBeam?.before?.left || 'N/A'}</td>
-                <td>{techData.headlightTester?.lowBeam?.after?.left || 'N/A'}</td>
-                <td>{techData.headlightTester?.highBeam?.before?.left || 'N/A'}</td>
-                <td>{techData.headlightTester?.highBeam?.after?.left || 'N/A'}</td>
-              </tr>
-              <tr>
-                <td>Right Hand</td>
-                <td>{techData.headlightTester?.lowBeam?.before?.right || 'N/A'}</td>
-                <td>{techData.headlightTester?.lowBeam?.after?.right || 'N/A'}</td>
-                <td>{techData.headlightTester?.highBeam?.before?.right || 'N/A'}</td>
-                <td>{techData.headlightTester?.highBeam?.after?.right || 'N/A'}</td>
-              </tr>
-            </tbody>
-          </table>
+          <h5 className="font-semibold text-sm sm:text-base">V. Headlight Tester</h5>
+          <div className="overflow-x-auto">
+            <table className="table table-zebra w-full text-xs sm:text-sm">
+              <thead>
+                <tr>
+                  <th className="p-1 sm:p-2 text-xs"></th>
+                  <th className="p-1 sm:p-2 text-xs">Low B</th>
+                  <th className="p-1 sm:p-2 text-xs">Low A</th>
+                  <th className="p-1 sm:p-2 text-xs">High B</th>
+                  <th className="p-1 sm:p-2 text-xs">High A</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="p-1 sm:p-2">Left</td>
+                  <td className="p-1 sm:p-2">{techData.headlightTester?.lowBeam?.before?.left || 'N/A'}</td>
+                  <td className="p-1 sm:p-2">{techData.headlightTester?.lowBeam?.after?.left || 'N/A'}</td>
+                  <td className="p-1 sm:p-2">{techData.headlightTester?.highBeam?.before?.left || 'N/A'}</td>
+                  <td className="p-1 sm:p-2">{techData.headlightTester?.highBeam?.after?.left || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td className="p-1 sm:p-2">Right</td>
+                  <td className="p-1 sm:p-2">{techData.headlightTester?.lowBeam?.before?.right || 'N/A'}</td>
+                  <td className="p-1 sm:p-2">{techData.headlightTester?.lowBeam?.after?.right || 'N/A'}</td>
+                  <td className="p-1 sm:p-2">{techData.headlightTester?.highBeam?.before?.right || 'N/A'}</td>
+                  <td className="p-1 sm:p-2">{techData.headlightTester?.highBeam?.after?.right || 'N/A'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* VI. ABS Testing */}
         <div>
-          <h5 className="font-semibold">VI. ABS Testing (if equipped)</h5>
-          <table className="table table-zebra w-full">
-            <thead>
-              <tr>
-                <th>Option</th>
-                <th>Remarks</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(techData.absTesting || []).map((abs, idx) => (
-                <tr key={idx}>
-                  <td>{abs.option || 'N/A'}</td>
-                  <td>{abs.remarks || 'N/A'}</td>
+          <h5 className="font-semibold text-sm sm:text-base">VI. ABS Testing (if equipped)</h5>
+          <div className="overflow-x-auto">
+            <table className="table table-zebra w-full text-xs sm:text-sm">
+              <thead>
+                <tr>
+                  <th className="p-1 sm:p-2">Option</th>
+                  <th className="p-1 sm:p-2">Remarks</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {(techData.absTesting || []).map((abs, idx) => (
+                  <tr key={idx}>
+                    <td className="p-1 sm:p-2">{abs.option || 'N/A'}</td>
+                    <td className="p-1 sm:p-2 wrap= max-w-50 sm:max-w-none">{abs.remarks || 'N/A'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     );
@@ -976,7 +986,7 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
             <div className="overflow-x-auto">
               <table className="table table-zebra w-full">
                 <thead>
-                  <tr className="bg-base-300">
+                  <tr className="bg-base-300 text-xs sm:text-sm">
                     <th className="text-left">Date</th>
                     <th className="text-left">Customer</th>
                     <th className="text-left">Model</th>
@@ -988,38 +998,38 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
                 </thead>
                 <tbody>
                   {paginatedJobs.map(job => (
-                    <tr key={job._id} className="hover:bg-base-200 transition">
-                      <td className="font-medium">{formatDate(job.jobInfo?.date)}</td>
-                      <td>
-                        <span className="font-semibold">{job.jobInfo?.customer || "N/A"}</span>
+                    <tr key={job._id} className="hover:bg-base-200 transition text-xs sm:text-sm">
+                      <td className="font-medium text-xs sm:text-sm whitespace-nowrap">{formatDate(job.jobInfo?.date)}</td>
+                      <td className="text-xs sm:text-sm">
+                        <span className="font-semibold line-clamp-2">{job.jobInfo?.customer || "N/A"}</span>
                       </td>
-                      <td>{job.jobInfo?.model || "N/A"}</td>
-                      <td>
-                        <span className="badge badge-outline">{job.jobInfo?.bodyType || "N/A"}</span>
+                      <td className="text-xs sm:text-sm">{job.jobInfo?.model || "N/A"}</td>
+                      <td className="text-xs sm:text-sm">
+                        <span className="badge badge-outline px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm whitespace-nowrap">{job.jobInfo?.bodyType || "N/A"}</span>
                       </td>
                       <td>
-                        <span className="badge badge-primary font-semibold">{job.category?.name || "Uncategorized"}</span>
+                        <span className="badge badge-primary font-semibold px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm whitespace-nowrap">{job.category?.name || "Uncategorized"}</span>
                       </td>
                       <td className="text-center">
                         {job.defectSummary?.length > 0 ? (
-                          <span className="badge badge-warning gap-2">
+                          <span className="badge badge-warning gap-2 px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm whitespace-nowrap">
                             {job.defectSummary.length}
                           </span>
                         ) : (
-                          <span className="badge badge-success">✓ None</span>
+                          <span className="badge badge-success px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm whitespace-nowrap">✓ None</span>
                         )}
                       </td>
                       <td className="text-center">
-                        <div className="flex flex-col sm:flex-row justify-center gap-2">
+                        <div className="flex flex-col sm:flex-row justify-center gap-1 sm:gap-2">
                           <Link 
                             to={`/report/${job._id}`} 
-                            className="btn btn-sm btn-info gap-1 text-white"
+                            className="btn btn-xs sm:btn-sm btn-info gap-1 text-white"
                             title="View Report"
                           >
-                            <Eye size={16} /> View
+                            <Eye size={14} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">View</span>
                           </Link>
                           <button
-                            className="btn btn-sm btn-primary gap-1"
+                            className="btn btn-xs sm:btn-sm btn-primary gap-1"
                             onClick={() => handleDownloadPDF(job._id, job.category?.name)}
                             disabled={downloading}
                             title="Download PDF"
@@ -1030,7 +1040,7 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
                               </>
                             ) : (
                               <>
-                                <Download size={16} /> PDF
+                                <Download size={14} className="sm:w-4 sm:h-4" /> <span className="hidden sm:inline">PDF</span>
                               </>
                             )}
                           </button>

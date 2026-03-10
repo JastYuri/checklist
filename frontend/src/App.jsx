@@ -9,6 +9,7 @@ import Checklist from "./pages/Checklist";
 import ReportPage from "./pages/ReportPage";   // ✅ Now acts as Job List
 import Category from "./pages/Category";
 import Manual from "./pages/Manual"; // ✅ Import the new Manual component
+import AdminPanel from "./pages/AdminPanel"; // ✅ Import AdminPanel component
 import ProtectedRoute from "./components/ProtectedRoute";
 import Toast from "./components/Toast";   // ✅ Import global toast
 
@@ -66,6 +67,16 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Manual />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* ✅ Admin Panel route (Admin only) */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute>
+            <AdminPanel />
           </ProtectedRoute>
         }
       />

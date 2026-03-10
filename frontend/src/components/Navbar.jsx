@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useContext, useState, useEffect, useRef } from "react"; // ✅ Added useRef for dropdown handling
 import { AuthContext } from "../context/AuthContext";
-import { Home, ListChecks, FolderPlus, LogOut, FileText, Menu, X, BookOpen } from "lucide-react"; // ✅ Added BookOpen icon for Manual
+import { Home, ListChecks, FolderPlus, LogOut, FileText, Menu, X, BookOpen, Shield } from "lucide-react"; // ✅ Added Shield icon for Admin
 
 export default function Navbar() {
   const { user, logout } = useContext(AuthContext);
@@ -78,6 +78,13 @@ export default function Navbar() {
               <BookOpen size={16} className="sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">Manual</span>
             </Link>
+            {/* ✅ Admin Panel link (only for admins) */}
+            {user?.role === "admin" && (
+              <Link to="/admin" className="btn btn-ghost text-sm sm:text-base text-purple-600 hover:bg-purple-100">
+                <Shield size={16} className="sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Admin</span>
+              </Link>
+            )}
           </div>
 
           {/* ✅ Always-visible elements: Logout and theme toggle */}
@@ -128,6 +135,14 @@ export default function Navbar() {
                 <BookOpen size={16} className="sm:w-5 sm:h-5" /> Manual
               </Link>
             </li>
+            {/* ✅ Admin Panel link in dropdown (only for admins) */}
+            {user?.role === "admin" && (
+              <li>
+                <Link to="/admin" onClick={handleLinkClick} className="text-sm sm:text-base text-purple-600">
+                  <Shield size={16} className="sm:w-5 sm:h-5" /> Admin Panel
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
       )}

@@ -8,6 +8,8 @@ import categoryRoutes from "./src/routes/categoryRoutes.js";
 import jobRoutes from "./src/routes/jobRoutes.js";
 import reportRoutes from "./src/routes/reportRoutes.js";
 import manualRoutes from "./src/routes/manual.js";
+import adminRoutes from "./src/routes/adminRoutes.js";
+import settingsRoutes from "./src/routes/settingsRoutes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -25,6 +27,8 @@ app.use(express.json());
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/settings", settingsRoutes);
 app.use("/api/checklist", checklistRoutes);
 app.use("/api/category", categoryRoutes);
 app.use("/api/job", jobRoutes); 
