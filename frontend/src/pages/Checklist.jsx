@@ -34,7 +34,7 @@ export default function Checklist() {
         const res = await axiosInstance.get("/category");
         setCategories(res.data);
       } catch (error) {
-        console.error("Error fetching categories:", error);
+        // Production: removed error log
         toast.error("Failed to load categories.");
       }
     };
@@ -83,7 +83,7 @@ export default function Checklist() {
           const res = await axiosInstance.get(`/job/category/${selected._id}`);
           setJobs(res.data);
         } catch (error) {
-          console.error("Error fetching jobs:", error);
+          // Production: removed error log
           toast.error("Failed to load jobs.");
         } finally {
           setLoading(false);
@@ -105,7 +105,7 @@ export default function Checklist() {
           setSelected(res.data);
           localStorage.setItem("selectedCategory", JSON.stringify(res.data));
         } catch (error) {
-          console.error("Error fetching category details:", error);
+          // Production: removed error log
           toast.error("Failed to load category details.");
         }
       };
@@ -121,7 +121,7 @@ export default function Checklist() {
           const res = await axiosInstance.get(`/category/${currentJob.category._id}`);  // ✅ Use _id in URL
           setCategoryData(res.data); // Includes appearanceImages
         } catch (err) {
-          console.error("Error fetching category:", err);
+          // Production: removed error log
           toast.error("Failed to load category data");
         }
       };
@@ -143,7 +143,7 @@ export default function Checklist() {
       setShowChecklist(false); 
       setCurrentJob(null);     
     } catch (error) {
-      console.error("❌ Error fetching category details:", error);
+      // Production: removed error log
       setSelected(cat);
       setChecklist(cat.checklist || []);
       localStorage.setItem("selectedCategory", JSON.stringify(cat));
@@ -243,7 +243,7 @@ export default function Checklist() {
                 toast.success("Job prepared! Now proceed with the checklist.", { duration: 4000 });
               } catch (err) {
                 toast.error("Unexpected error preparing job");
-                console.error("❌ Error preparing job:", err);
+                // Production: removed error log
               } finally {
                 setSavingJob(false);
               }
@@ -429,8 +429,7 @@ export default function Checklist() {
   };
 
   const renderChecklist = (job) => {
-    console.log("📂 Rendering checklist for temporary job:", job?._id);
-    console.log("📋 Checklist data (temporary):", job?.checklist);
+    // Production: removed debug logs
 
     return (
       <div className="bg-linear-to-br from-base-100 to-base-200 border-2 border-base-300 shadow-xl rounded-xl overflow-hidden p-4 sm:p-6 lg:p-8">
@@ -465,7 +464,7 @@ export default function Checklist() {
 
         onSaveAll={async (allData) => {
   try {
-    console.log("📋 allData received in parent:", allData);
+    // Production: removed debug log
     
     // ✅ Create FormData for multipart upload (required for files)
     const formData = new FormData();
@@ -542,13 +541,22 @@ export default function Checklist() {
       const matchesDate = !searchDate || (job.jobInfo?.date
                   ? new Date(job.jobInfo.date).toISOString().split("T")[0] === searchDate
         : false);
-    const matchesSearch = !searchTerm || 
-      (job.jobInfo?.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       job.jobInfo?.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       job.category?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
-    return matchesDate && matchesSearch;
-  })
-  .sort((a, b) => new Date(b.jobInfo?.date || 0) - new Date(a.jobInfo?.date || 0)); // Latest date first
+      const matchesSearch = !searchTerm || 
+        (job.jobInfo?.customer?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         job.jobInfo?.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+         job.category?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
+      return matchesDate && matchesSearch;
+    })
+    .sort((a, b) => {
+      const dateA = new Date(a.jobInfo?.date || 0);
+      const dateB = new Date(b.jobInfo?.date || 0);
+      if (dateB - dateA !== 0) {
+        return dateB - dateA;
+      }
+      // If same date, sort by creation order (newest first)
+      // _id is a Mongo ObjectId, so sort descending
+      return b._id.localeCompare(a._id);
+    }); // Latest date first
 
   // Pagination logic (set to 5 jobs per page)
   const jobsPerPage = 5;

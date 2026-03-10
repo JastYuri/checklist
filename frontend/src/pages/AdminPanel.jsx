@@ -90,26 +90,15 @@ export default function AdminPanel() {
         url = `/admin/users/search?${params.toString()}`;
       }
 
-      console.log("=== Fetching Users ===");
-      console.log("URL:", url);
-      console.log("Filters:", { searchTerm, filterRole, filterStatus });
+      // Production: removed verbose fetch logs
       
       const res = await axiosInstance.get(url);
       
-      console.log("Response received:", {
-        count: res.data.users?.length,
-        users: res.data.users?.map(u => ({ 
-          username: u.username, 
-          role: u.role, 
-          isActive: u.isActive,
-          email: u.email 
-        }))
-      });
+      // Production: removed response logs
       
       setUsers(res.data.users);
-      console.log("State updated with", res.data.users.length, "users");
+      // Production: removed state update log
     } catch (error) {
-      console.error("Error fetching users:", error);
       toast.error(error.response?.data?.message || "Failed to fetch users");
     } finally {
       setLoading(false);
@@ -121,7 +110,6 @@ export default function AdminPanel() {
       const res = await axiosInstance.get("/admin/stats");
       setStats(res.data.stats);
     } catch (error) {
-      console.error(error);
     }
   };
 
@@ -139,7 +127,6 @@ export default function AdminPanel() {
       const res = await axiosInstance.get("/admin/system-info");
       setSystemInfo(res.data.systemInfo);
     } catch (error) {
-      console.error("Failed to fetch system info:", error);
       toast.error("Failed to fetch system information");
     }
   };
@@ -153,7 +140,6 @@ export default function AdminPanel() {
       toast.success("System settings saved to database");
       setTimeout(() => setSettingsSaved(false), 3000);
     } catch (error) {
-      console.error("Error saving settings:", error);
       toast.error(error.response?.data?.error || "Failed to save settings");
     }
   };
@@ -165,7 +151,6 @@ export default function AdminPanel() {
         setSystemSettings(res.data.settings);
       }
     } catch (error) {
-      console.error("Failed to load settings:", error);
       toast.error("Failed to load system settings");
     }
   };
@@ -401,9 +386,9 @@ export default function AdminPanel() {
 
         {/* Tabs */}
         <div className="mb-6 bg-white rounded-lg shadow">
-          <div className="flex border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row border-b border-gray-200 overflow-x-auto">
             <button
-              className={`flex-1 py-4 px-6 font-semibold text-center transition-all relative ${
+              className={`w-full sm:flex-1 py-3 sm:py-4 px-4 sm:px-6 font-semibold text-center transition-all relative ${
                 activeTab === "users"
                   ? "text-blue-600"
                   : "text-gray-600 hover:text-gray-900"
@@ -411,14 +396,14 @@ export default function AdminPanel() {
               onClick={() => setActiveTab("users")}
             >
               <div className="flex items-center justify-center gap-2">
-                <Users size={18} /> User Management
+                <Users size={18} /> <span className="text-xs sm:text-base">User Management</span>
               </div>
               {activeTab === "users" && (
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t"></div>
               )}
             </button>
             <button
-              className={`flex-1 py-4 px-6 font-semibold text-center transition-all relative ${
+              className={`w-full sm:flex-1 py-3 sm:py-4 px-4 sm:px-6 font-semibold text-center transition-all relative ${
                 activeTab === "activity"
                   ? "text-blue-600"
                   : "text-gray-600 hover:text-gray-900"
@@ -426,14 +411,14 @@ export default function AdminPanel() {
               onClick={() => setActiveTab("activity")}
             >
               <div className="flex items-center justify-center gap-2">
-                <Activity size={18} /> Activity Dashboard
+                <Activity size={18} /> <span className="text-xs sm:text-base">Activity Dashboard</span>
               </div>
               {activeTab === "activity" && (
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t"></div>
               )}
             </button>
             <button
-              className={`flex-1 py-4 px-6 font-semibold text-center transition-all relative ${
+              className={`w-full sm:flex-1 py-3 sm:py-4 px-4 sm:px-6 font-semibold text-center transition-all relative ${
                 activeTab === "settings"
                   ? "text-blue-600"
                   : "text-gray-600 hover:text-gray-900"
@@ -441,7 +426,7 @@ export default function AdminPanel() {
               onClick={() => setActiveTab("settings")}
             >
               <div className="flex items-center justify-center gap-2">
-                <BarChart3 size={18} /> System Settings
+                <BarChart3 size={18} /> <span className="text-xs sm:text-base">System Settings</span>
               </div>
               {activeTab === "settings" && (
                 <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t"></div>

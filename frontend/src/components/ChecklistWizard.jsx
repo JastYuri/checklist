@@ -25,8 +25,7 @@ const AppearancePreviewCanvas = ({ side, marks, imageSrc }) => {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       // Debug: Log canvas size and marks
-      console.log(`Canvas size for ${side}:`, canvas.width, canvas.height);
-      console.log(`Marks for ${side}:`, marks);
+      // Production: removed debug logs
       // Draw permanent marks (adapted from AppearanceChecklist)
       marks.forEach((mark) => {
         ctx.strokeStyle = 'red';
@@ -66,7 +65,7 @@ const AppearancePreviewCanvas = ({ side, marks, imageSrc }) => {
       const height = img.clientHeight;
       canvas.width = width;
       canvas.height = height;
-      console.log(`Image displayed size for ${side}:`, width, height); // Debug
+      // Production: removed debug log
       redrawCanvas();
     };
 
@@ -906,10 +905,7 @@ const validateChecklist = () => {
                 onClick={async () => {
                   try {
                     setSaving(true);
-                    // ✅ Add console logs here to debug
-                    console.log("📋 localAppearanceData:", localAppearanceData);
-                    console.log("📋 localSummaryData:", localSummaryData);
-                    console.log("📋 localTechnicalData:", localTechnicalData);
+                    // Production: removed debug logs
                     // ✅ Updated: Pass data in correct structure (appearanceData as array)
                     await onSaveAll({
                       checklist,
@@ -921,7 +917,7 @@ const validateChecklist = () => {
                     clearLocalStorage(); // ✅ Clear localStorage on final save
                     toast.success("All checklists finalized and saved successfully!");
                   } catch (err) {
-                    console.error("❌ Error finalizing all checklists:", err);
+                    // Production: removed error log
                     toast.error("Failed to save all checklists!");
                   } finally {
                     setSaving(false);

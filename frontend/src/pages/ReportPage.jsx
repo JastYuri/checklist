@@ -29,7 +29,7 @@ const ReportPage = () => {
           const res = await axiosInstance.get(`/job/${id}`);
           setSingleJob(res.data);
         } catch (err) {
-          console.error("Error fetching job:", err);
+          // Production: removed error log
           setSingleJob(null);
         } finally {
           setSingleJobLoading(false);
@@ -39,10 +39,10 @@ const ReportPage = () => {
     } else {
       // Job list view
       const fetchJobs = async () => {
-        console.log("📥 Fetching all jobs...");
+        // Production: removed debug log
         try {
           const res = await axiosInstance.get("/job");
-          console.log("✅ Jobs data received:", res.data);
+          // Production: removed debug log
 
           // ✅ Sort jobs by latest date
           const sortedJobs = res.data.sort((a, b) =>
@@ -51,10 +51,10 @@ const ReportPage = () => {
 
           setJobs(sortedJobs);
         } catch (err) {
-          console.error("❌ Error fetching jobs:", err.response?.data || err.message);
+          // Production: removed error log
         } finally {
           setLoading(false);
-          console.log("⏹ Finished jobs fetch cycle");
+          // Production: removed debug log
         }
       };
       fetchJobs();
@@ -73,30 +73,41 @@ const ReportPage = () => {
 
   // ✅ Filter and search logic
   const getFilteredJobs = () => {
-    return jobs.filter(job => {
-      // Search by customer or model (case-insensitive)
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = !searchTerm || 
-        (job.jobInfo?.customer?.toLowerCase().includes(searchLower)) ||
-        (job.jobInfo?.model?.toLowerCase().includes(searchLower));
+    return jobs
+      .filter(job => {
+        // Search by customer or model (case-insensitive)
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = !searchTerm || 
+          (job.jobInfo?.customer?.toLowerCase().includes(searchLower)) ||
+          (job.jobInfo?.model?.toLowerCase().includes(searchLower));
 
-      // Filter by category
-      const matchesCategory = !selectedCategory || 
-        (job.category?._id === selectedCategory);
+        // Filter by category
+        const matchesCategory = !selectedCategory || 
+          (job.category?._id === selectedCategory);
 
-      // Filter by date
-      const matchesDate = !dateFilter || 
-        (new Date(job.jobInfo?.date).toDateString() === new Date(dateFilter).toDateString());
+        // Filter by date
+        const matchesDate = !dateFilter || 
+          (new Date(job.jobInfo?.date).toDateString() === new Date(dateFilter).toDateString());
 
-      // Filter by defect status
-      const hasDefects = job.defectSummary?.length > 0;
-      const matchesDefectFilter = 
-        defectFilter === "all" || 
-        (defectFilter === "with-defects" && hasDefects) ||
-        (defectFilter === "no-defects" && !hasDefects);
+        // Filter by defect status
+        const hasDefects = job.defectSummary?.length > 0;
+        const matchesDefectFilter = 
+          defectFilter === "all" || 
+          (defectFilter === "with-defects" && hasDefects) ||
+          (defectFilter === "no-defects" && !hasDefects);
 
-      return matchesSearch && matchesCategory && matchesDate && matchesDefectFilter;
-    });
+        return matchesSearch && matchesCategory && matchesDate && matchesDefectFilter;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.jobInfo?.date || 0);
+        const dateB = new Date(b.jobInfo?.date || 0);
+        if (dateB - dateA !== 0) {
+          return dateB - dateA;
+        }
+        // If same date, sort by creation order (newest first)
+        // _id is a Mongo ObjectId, so sort descending
+        return b._id.localeCompare(a._id);
+      });
   };
 
   const filteredJobs = getFilteredJobs();
@@ -111,7 +122,7 @@ const ReportPage = () => {
   }, [searchTerm, selectedCategory, dateFilter, defectFilter]);
 
   const handleDownloadPDF = async (jobId, categoryName) => {
-    console.log("📥 Starting PDF download for job:", jobId);
+    // Production: removed debug log
     setDownloading(true); // Set loading state
     try {
       // Fetch job data for customer and date to build unique filename
@@ -130,7 +141,7 @@ const ReportPage = () => {
         throw new Error("Received empty PDF data");
       }
 
-      console.log("✅ PDF blob received, size:", response.data.size);
+      // Production: removed debug log
 
       // Create blob URL
       const blob = new Blob([response.data], { type: "application/pdf" });
@@ -148,9 +159,9 @@ const ReportPage = () => {
       // Clean up
       window.URL.revokeObjectURL(url);
 
-      console.log("📤 PDF download triggered successfully with filename:", filename);
+      // Production: removed debug log
     } catch (err) {
-      console.error("❌ Error downloading PDF:", err.response?.data || err.message);
+      // Production: removed error log
       alert("Failed to download PDF. Please try again.");
     } finally {
       setDownloading(false); // Reset loading state
@@ -831,7 +842,7 @@ const renderAppearanceChecklist = (appearanceMarks, appearanceImages) => {
     </div>
   );
 
-  console.log("🖥 Rendering ReportPage with jobs:", jobs.length);
+  // Production: removed debug log
 
   return (
     <div className="min-h-screen bg-base-200 p-4 sm:p-6">

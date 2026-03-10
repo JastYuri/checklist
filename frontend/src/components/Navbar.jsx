@@ -105,45 +105,32 @@ export default function Navbar() {
       {/* ✅ Dropdown menu for small/medium screens */}
       {menuOpen && (
         <div
-          ref={dropdownRef} // ✅ Attach ref for outside click detection
-          className="absolute top-full right-0 mt-2 w-48 sm:w-56 bg-base-100 shadow-lg rounded-box z-50 lg:hidden" // ✅ Responsive width
+          ref={dropdownRef}
+          className="absolute top-full right-2 left-2 mx-auto mt-2 max-w-xs w-[90vw] bg-base-100 shadow-xl rounded-2xl z-50 lg:hidden flex flex-col border border-gray-200"
         >
-          <ul className="menu p-2">
-            <li>
-              <Link to="/dashboard" onClick={handleLinkClick} className="text-sm sm:text-base">
-                <Home size={16} className="sm:w-5 sm:h-5" /> Dashboard
-              </Link>
-            </li>
-            <li>
-              <Link to="/checklist" onClick={handleLinkClick} className="text-sm sm:text-base">
-                <ListChecks size={16} className="sm:w-5 sm:h-5" /> Checklist
-              </Link>
-            </li>
-            <li>
-              <Link to="/category" onClick={handleLinkClick} className="text-sm sm:text-base">
-                <FolderPlus size={16} className="sm:w-5 sm:h-5" /> Category
-              </Link>
-            </li>
-            <li>
-              <Link to="/report" onClick={handleLinkClick} className="text-sm sm:text-base">
-                <FileText size={16} className="sm:w-5 sm:h-5" /> Reports
-              </Link>
-            </li>
-            {/* ✅ New Manual link in dropdown */}
-            <li>
-              <Link to="/manual" onClick={handleLinkClick} className="text-sm sm:text-base">
-                <BookOpen size={16} className="sm:w-5 sm:h-5" /> Manual
-              </Link>
-            </li>
-            {/* ✅ Admin Panel link in dropdown (only for admins) */}
-            {user?.role === "admin" && (
-              <li>
-                <Link to="/admin" onClick={handleLinkClick} className="text-sm sm:text-base text-purple-600">
-                  <Shield size={16} className="sm:w-5 sm:h-5" /> Admin Panel
-                </Link>
-              </li>
-            )}
-          </ul>
+          <Link to="/dashboard" className="flex items-center gap-2 px-4 py-3 text-base font-medium hover:bg-gray-100 rounded-t-2xl transition" onClick={handleLinkClick}>
+            <Home size={20} className="text-blue-600" /> Dashboard
+          </Link>
+          <Link to="/checklist" className="flex items-center gap-2 px-4 py-3 text-base font-medium hover:bg-gray-100 transition" onClick={handleLinkClick}>
+            <ListChecks size={20} className="text-green-600" /> Checklist
+          </Link>
+          <Link to="/category" className="flex items-center gap-2 px-4 py-3 text-base font-medium hover:bg-gray-100 transition" onClick={handleLinkClick}>
+            <FolderPlus size={20} className="text-yellow-600" /> Category
+          </Link>
+          <Link to="/report" className="flex items-center gap-2 px-4 py-3 text-base font-medium hover:bg-gray-100 transition" onClick={handleLinkClick}>
+            <FileText size={20} className="text-red-600" /> Reports
+          </Link>
+          <Link to="/manual" className="flex items-center gap-2 px-4 py-3 text-base font-medium hover:bg-gray-100 transition" onClick={handleLinkClick}>
+            <BookOpen size={20} className="text-purple-600" /> Manual
+          </Link>
+          {user?.role === "admin" && (
+            <Link to="/admin" className="flex items-center gap-2 px-4 py-3 text-base font-medium hover:bg-purple-100 text-purple-700 transition" onClick={handleLinkClick}>
+              <Shield size={20} className="text-purple-700" /> Admin
+            </Link>
+          )}
+          <button onClick={logout} className="flex items-center gap-2 px-4 py-3 text-base font-medium text-white bg-error rounded-b-2xl mt-1 transition">
+            <LogOut size={20} /> Logout
+          </button>
         </div>
       )}
     </div>

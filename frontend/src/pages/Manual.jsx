@@ -24,7 +24,7 @@ const Manual = () => {
       const response = await axiosInstance.get("/manual");
       setManuals(response.data.manuals || []);
     } catch (err) {
-      console.log('Error fetching manuals:', err.message);
+      // Production: removed error log
       setManuals([]);
     }
   };
@@ -82,7 +82,7 @@ const Manual = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setManuals(prev => [response.data.manual, ...prev]);
-      console.log('Manual uploaded successfully!');
+      // Production: removed success log
     } catch (err) {
       setError('Failed to upload manual: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -110,7 +110,7 @@ const Manual = () => {
       // ✅ Use axiosInstance
       await axiosInstance.delete(`/manual/${manualToDelete.id}`);
       setManuals(prev => prev.filter(m => m.id !== manualToDelete.id));
-      console.log('Manual deleted successfully!');
+      // Production: removed success log
     } catch (err) {
       setError('Failed to delete manual: ' + (err.response?.data?.message || err.message));
     } finally {

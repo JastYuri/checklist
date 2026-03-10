@@ -67,7 +67,7 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
             });
             newImages[side] = img;
           } catch (e) {
-            console.error(`Failed to load image for ${side}`, e);
+            // Production: removed error log
           }
         }
       }
@@ -234,8 +234,9 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
 
   // Unified Handler for Start (Mouse & Touch)
   const handleStart = (e) => {
-    if (e.cancelable) e.preventDefault(); 
-    
+    // Only preventDefault for mouse events
+    if (e.type === 'mousedown') e.preventDefault();
+
     const coords = getCoords(e);
     if (!coords) return;
     const { x, y, rawX, rawY } = coords;
@@ -276,8 +277,9 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
 
   // Unified Handler for Move (Mouse & Touch)
   const handleMove = (e) => {
-    if (e.cancelable) e.preventDefault();
-    
+    // Only preventDefault for mouse events
+    if (e.type === 'mousemove') e.preventDefault();
+
     const canvas = canvasRef.current;
     const coords = getCoords(e);
     if (!coords) return;
@@ -329,7 +331,7 @@ const AppearanceChecklist = ({ data, onChange, onSave, appearanceImages }) => {
     }
 
     if (!isDrawing) return;
-    
+
     if (mode === 'circle') {
       const radius = Math.sqrt((x - currentPath.startX) ** 2 + (y - currentPath.startY) ** 2);
       setPreviewMark({ type: 'circle', x: currentPath.startX, y: currentPath.startY, radius });

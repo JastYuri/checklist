@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 
-// ✅ Import special checklists
+// Import special checklists
 import AppearanceChecklist from "./appearanceChecklist";
 import SummaryChecklist from "./summaryChecklist";
 import TechnicalChecklist from "./technicalChecklist";
@@ -11,17 +11,17 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
   const [editedChecklist, setEditedChecklist] = useState(job.checklist || []);
   const [currentSection, setCurrentSection] = useState(0);
   const [formOpen, setFormOpen] = useState(false);
-  // ✅ New states for image preview
+  // New states for image preview
   const [imagePreviewOpen, setImagePreviewOpen] = useState(false);
   const [previewImageUrl, setPreviewImageUrl] = useState(null);
-  // ✅ Updated: Use correct property names from backend (appearanceMarks, defectSummary, technicalTests)
+  // Updated: Use correct property names from backend (appearanceMarks, defectSummary, technicalTests)
   const [specialStep, setSpecialStep] = useState(0); // 0 = normal, 1 = appearance, 2 = summary, 3 = technical
   const [editedAppearanceData, setEditedAppearanceData] = useState(job.appearanceMarks || []); // ✅ Fixed: Initialize from job.appearanceMarks
   const [editedSummaryData, setEditedSummaryData] = useState(job.defectSummary || []); // ✅ Fixed: Initialize from job.defectSummary
   const [editedTechnicalData, setEditedTechnicalData] = useState(job.technicalTests || {}); 
   const [validationError, setValidationError] = useState(null);
 
-  // ✅ Updated: useEffect to sync with correct backend properties
+  // Updated: useEffect to sync with correct backend properties
   useEffect(() => {
     setEditedAppearanceData(job.appearanceMarks || []);
     setEditedSummaryData(job.defectSummary || []);
@@ -39,7 +39,7 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
   setEditedChecklist(prev => {
     const updated = [...prev];
     updated[sectionIdx].items[itemIdx].status = status;
-    // ✅ Keep remarks regardless of status
+    // Keep remarks regardless of status
     return updated;
   });
 };
@@ -52,7 +52,7 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
     });
   };
 
-  // ✅ New: Update name for input-type items (only if they have a value)
+  // New: Update name for input-type items (only if they have a value)
   const updateName = (sectionIdx, itemIdx, value) => {
     setEditedChecklist(prev => {
       const updated = [...prev];
@@ -62,7 +62,7 @@ const JobEditModal = ({ job, onSave, onCancel }) => {
   };
 
 
-  // ✅ ADD THIS useEffect
+  // ADD THIS useEffect
 useEffect(() => {
   if (editedChecklist && editedChecklist.length > 0) {
     validateChecklist();
@@ -100,7 +100,7 @@ const validateChecklist = () => {
   };
 
   const handleSave = async () => {
-    // ✅ Updated: Create FormData for multipart upload (required for images)
+    // Updated: Create FormData for multipart upload (required for images)
     const formData = new FormData();
     
     // Append JSON data as strings (files in arrays will be ignored here)
@@ -110,7 +110,7 @@ const validateChecklist = () => {
     formData.append('defectSummary', JSON.stringify(editedSummaryData));
     formData.append('technicalTests', JSON.stringify(editedTechnicalData));
     
-    // ✅ Append files with dynamic fieldnames (matching backend expectations)
+    // Append files with dynamic fieldnames (matching backend expectations)
     editedAppearanceData.forEach((mark, idx) => {
       if (mark.image && mark.image instanceof File) {
         formData.append(`appearance-${idx}`, mark.image);
@@ -125,7 +125,7 @@ const validateChecklist = () => {
     try {
       await onSave(formData); // Parent handles axios PUT with FormData
     } catch (err) {
-      console.error("❌ Error saving job:", err);
+      // Production: removed error log
       alert("Error saving job: " + err.message);
     }
   };
@@ -133,14 +133,14 @@ const validateChecklist = () => {
   const section = editedChecklist[currentSection] || { section: "", items: [] };
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4"> {/* ✅ Responsive: Add padding for mobile */}
-      <div className="bg-base-100 p-4 md:p-6 rounded shadow-lg w-full max-w-5xl max-h-[90vh] flex flex-col"> {/* ✅ Responsive: Adaptive padding */}
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-base-100 p-4 md:p-6 rounded shadow-lg w-full max-w-5xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 space-y-2 md:space-y-0"> {/* ✅ Responsive: Stack vertically on mobile */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 space-y-2 md:space-y-0">
           <h3 className="text-lg font-bold">
             Editing Job: {job.category?.name} ({editedJobInfo.customer || "No customer"})
           </h3>
-          <div className="flex flex-wrap space-x-2"> {/* ✅ Responsive: Wrap buttons */}
+          <div className="flex flex-wrap space-x-2">
             <button className="btn btn-sm btn-info" onClick={() => setFormOpen(true)}>
               Edit Form
             </button>
@@ -153,28 +153,28 @@ const validateChecklist = () => {
           </div>
         </div>
 
-        {/* Conditional Rendering for Normal vs Special Checklists */}
+        
         {specialStep === 0 ? (
           // Normal Checklist
           <div className="flex-1 overflow-y-auto border p-4 rounded">
             <h4 className="text-lg font-semibold mb-4">Normal Checklist</h4>
 
-            {/* Legend */}
-            <div className="flex flex-wrap space-x-4 md:space-x-6 mb-4 text-sm"> {/* ✅ Responsive: Wrap legend */}
+            
+            <div className="flex flex-wrap space-x-4 md:space-x-6 mb-4 text-sm">
               <span>⭕ Good</span>
               <span>❌ No Good</span>
               <span>ⓧ Corrected</span>
               <span>🚫 N/A</span>
             </div>
 
-            {/* Section header with counter */}
-            <h5 className="font-bold mb-2 text-sm md:text-base"> {/* ✅ Responsive: Adaptive text size */}
+            
+            <h5 className="font-bold mb-2 text-sm md:text-base">
               Section {currentSection + 1} of {editedChecklist.length}: {section.section}
             </h5>
 
-            {/* Items table - ✅ Added Image column, reordered, and centered */}
-            <div className="overflow-x-auto"> {/* ✅ Responsive: Horizontal scroll for table */}
-              <table className="table w-full border min-w-150"> {/* ✅ Responsive: Min width for table */}
+            
+            <div className="overflow-x-auto">
+              <table className="table w-full border min-w-150">
                 <thead>
                   <tr>
                     <th className="text-center">Reference</th>
@@ -184,7 +184,7 @@ const validateChecklist = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {/* ✅ Filter: Hide input items with no value (same as wizard preview) */}
+                  
                   {section.items
                     .filter((item) => !(item.type === "input" && !item.value))
                     .map((item, idx) => {
@@ -265,8 +265,8 @@ const validateChecklist = () => {
               </table>
             </div>
 
-            {/* Navigation */}
-            <div className="flex flex-col md:flex-row justify-between mt-6 space-y-2 md:space-y-0"> {/* ✅ Responsive: Stack buttons */}
+            
+            <div className="flex flex-col md:flex-row justify-between mt-6 space-y-2 md:space-y-0">
               {currentSection > 0 && (
                 <button
                   className="btn btn-secondary w-full md:w-auto"
@@ -289,7 +289,7 @@ const validateChecklist = () => {
               </button>
             )}
             </div>
-            {/* ✅ ADD THIS ERROR MESSAGE DISPLAY HERE */}
+            
 {validationError && (
   <div className="alert alert-error text-sm mt-3">
     <span>{validationError}</span>
@@ -338,8 +338,8 @@ const validateChecklist = () => {
               />
             )}
 
-            {/* Special Navigation */}
-            <div className="flex flex-col md:flex-row justify-between mt-6 space-y-2 md:space-y-0"> {/* ✅ Responsive: Stack buttons */}
+            
+            <div className="flex flex-col md:flex-row justify-between mt-6 space-y-2 md:space-y-0">
               {specialStep > 1 && (
                 <button
                   className="btn btn-secondary w-full md:w-auto"
@@ -360,8 +360,8 @@ const validateChecklist = () => {
           </div>
         )}
 
-        {/* Footer */}
-        <div className="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-2 mt-4"> {/* ✅ Responsive: Stack buttons */}
+        
+        <div className="flex flex-col md:flex-row justify-end space-y-2 md:space-y-0 md:space-x-2 mt-4">
           <button className="btn btn-sm btn-ghost w-full md:w-auto" onClick={onCancel}>
             Cancel
           </button>
@@ -371,9 +371,9 @@ const validateChecklist = () => {
         </div>
       </div>
 
-      {/* ✅ New Image Preview Modal */}
+      
       {imagePreviewOpen && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-60 p-4"> {/* ✅ Responsive: Add padding */}
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-60 p-4">
           <div className="bg-base-100 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] p-4 relative">
             <button
               className="btn btn-sm btn-circle btn-error absolute top-2 right-2"
@@ -392,12 +392,12 @@ const validateChecklist = () => {
       )}
 
       {formOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-60 p-4"> {/* ✅ Responsive: Add padding */}
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-60 p-4">
           <div className="bg-base-100 p-4 md:p-6 rounded shadow-lg w-full max-w-3xl max-h-[80vh] overflow-y-auto">
             <h3 className="text-lg font-bold mb-4">Edit Form</h3>
 
-            {/* Full job info form */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6"> {/* ✅ Responsive: Adaptive grid */}
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
               <div>
                 <label className="label font-medium">Customer</label>
                 <input
