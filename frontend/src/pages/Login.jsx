@@ -92,19 +92,42 @@ export default function Login() {
   if (user) return null;
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div
+      className="min-h-screen flex items-center justify-center p-4 relative"
+      style={{
+        background: "linear-gradient(135deg, #a5b4fc 0%, #6366f1 100%)",
+        minHeight: "100vh",
+        overflow: "hidden",
+      }}
+    >
+      {/* Background image layer */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          backgroundImage: "url('/bg-login.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          opacity: 0.5,
+          zIndex: 1,
+        }}
+        aria-hidden="true"
+      />
+      {/* Main content */}
+      <div className="w-full max-w-md relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-linear-to-br from-blue-500 to-indigo-600 rounded-full mb-4 shadow-lg">
             <Lock size={32} className="text-white" />
           </div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your account to continue</p>
+          <p className="text-gray-700 font-semibold">Sign in to your account to continue</p>
         </div>
-
         {/* Login Card */}
-        <div className="card w-full bg-white shadow-2xl border border-gray-100">
+        <div className="card w-full bg-white shadow-2xl border border-gray-100 rounded-xl">
           <form onSubmit={handleSubmit} className="card-body space-y-5" noValidate>
             {/* Email Input */}
             <div className="form-control">
@@ -122,7 +145,6 @@ export default function Login() {
                 />
               </div>
             </div>
-
             {/* Password Input */}
             <div className="form-control">
               <label className="label pb-2">
@@ -147,7 +169,6 @@ export default function Login() {
                 </button>
               </div>
             </div>
-
             {/* Admin Registration Link (Only shown after 8 clicks) */}
             {secretMode && (
               <div className="bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
@@ -157,7 +178,6 @@ export default function Login() {
                 </Link>
               </div>
             )}
-
             {/* Login Button */}
             <button 
               type="submit" 
@@ -173,10 +193,8 @@ export default function Login() {
                 "Sign In"
               )}
             </button>
-
             {/* Divider */}
             <div className="divider my-2">or</div>
-
             {/* Help Text */}
             <div className="text-center">
               <p className="text-gray-600 text-sm">
